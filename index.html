@@ -130,6 +130,12 @@
         }
         .role-btn:active { border-color: var(--fw-green); background-color: var(--completed-bg); color: var(--fw-green); transform: scale(0.98); }
         .role-btn span { display: block; font-size: 14px; color: var(--text-muted); margin-top: 10px; font-weight: normal; }
+        
+        .pwa-btn {
+            border: 2px dashed var(--fw-green) !important;
+            background-color: var(--completed-bg) !important;
+            color: var(--fw-green) !important;
+        }
 
         /* 근무자 선택 화면 */
         .member-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
@@ -294,7 +300,12 @@
     <!-- [1] 홈 화면 -->
     <div id="view-home" class="view-section active">
         <div class="home-container">
-            <div class="home-title">어떤 업무를 시작하시겠습니까?</div>
+            <!-- PWA 설치 유도 버튼 -->
+            <button id="pwa-install-btn" class="role-btn pwa-btn" style="display: none;" onclick="installApp()">
+                📱 모바일 앱(PWA) 설치하기
+                <span>스마트폰 홈 화면에 바로가기 앱을 생성합니다</span>
+            </button>
+
             <button class="role-btn" onclick="switchView('view-open')">
                 ☀️ 오픈 근무
                 <span>전일 마감 특이사항 및 전달사항 확인</span>
@@ -859,6 +870,53 @@
                 })
                 .catch(err => console.error('PWA Service Worker 등록 실패:', err));
         });
+    }
+
+    // ===== 8. PWA 수동 설치 제어 기능 =====
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        const installBtn = document.getElementById('pwa-install-btn');
+        if (installBtn) {
+            installBtn.style.display = 'block';
+        }
+    });
+
+    function isIOS() {
+        return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        if (isIOS() && !window.matchMedia('(display-mode: standalone)').matches) {
+            const installBtn = document.getElementById('pwa-install-btn');
+            if (installBtn) {
+                installBtn.style.display = 'block';
+                installBtn.querySelector('span').textContent = '아이폰 사파리 설치 방법을 확인합니다';
+            }
+        }
+    });
+
+    function installApp() {
+        if (isIOS()) {
+            alert("🍏 [아이폰 사파리 설치 안내]\n\n1. Safari 브라우저 하단의 '공유 버튼(네모 안 화살표)'을 누릅니다.\n2. 아래로 스크롤하여 '홈 화면에 추가'를 클릭합니다.\n3. 우측 상단의 '추가'를 누르면 앱이 생성됩니다!");
+            return;
+        }
+
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    console.log('User accepted the install prompt');
+                }
+                deferredPrompt = null;
+                const installBtn = document.getElementById('pwa-install-btn');
+                if (installBtn) installBtn.style.display = 'none';
+            });
+        } else {
+            alert("안드로이드 크롬 또는 삼성 인터넷 주소창 우측의 [설치(↓)] 아이콘이나 브라우저 메뉴의 [앱 설치]를 눌러주세요!");
+        }
     }
 
 </script>

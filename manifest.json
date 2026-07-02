@@ -8,7 +8,7 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "아가 파우미.png",
+      "src": "%EC%95%84%EA%B0%80%20%ED%8C%8C%EC%9A%B0%EB%AF%B8.png",
       "sizes": "192x192 512x512",
       "type": "image/png"
     }
