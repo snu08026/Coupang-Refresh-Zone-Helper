@@ -667,6 +667,10 @@
 
         if (viewId === 'view-open') loadNotesForOpen();
         if (viewId === 'view-close') window.scrollTo(0, 0);
+        if (viewId === 'view-close') {
+            window.scrollTo(0, 0);
+            syncDraftsFromServer();
+        }
         if (viewId === 'view-lounge') {
             window.scrollTo(0, 0);
             document.getElementById('lounge-search-input').value = '';
@@ -678,7 +682,7 @@
         }
     }
 
-    function loadNotesForOpen() {
+    function renderOpenNotes() {
         const saved = localStorage.getItem('fw_closing_state');
         const displayArea = document.getElementById('notes-content');
         
@@ -703,19 +707,43 @@
                             console.error(err);
                         }
                     }
-                    
                     displayArea.innerHTML = `<span class="author-tag">작성자: ${state.author || '알 수 없음'}${dateStr}</span>${state.notes.replace(/\n/g, '<br>')}`;
                     displayArea.classList.remove('no-notes');
-                } else {
-                    displayArea.innerHTML = '<div class="no-notes">전달된 특이사항이 없습니다.</div>';
+                    return;
                 }
             } catch (e) {
                 console.error("Error parsing open notes state", e);
-                displayArea.innerHTML = '<div class="no-notes">저장된 마감 데이터가 손상되었습니다.</div>';
             }
-        } else {
-            displayArea.innerHTML = '<div class="no-notes">저장된 마감 데이터가 없습니다.</div>';
         }
+        displayArea.innerHTML = '<div class="no-notes">전달된 특이사항이 없습니다.</div>';
+        displayArea.classList.add('no-notes');
+    }
+
+    function loadNotesForOpen() {
+        renderOpenNotes();
+        
+        // 서버에서 즉시 최종 마감 특이사항 내려받기
+        fetch(SYNC_URL_CLOSING_STATE + "?t=" + Date.now())
+            .then(res => res.text())
+            .then(resText => {
+                let base64urlStr = resText;
+                if (base64urlStr && base64urlStr.startsWith('"') && base64urlStr.endsWith('"')) {
+                    base64urlStr = base64urlStr.slice(1, -1);
+                }
+                if (base64urlStr && base64urlStr.trim() !== '') {
+                    try {
+                        const jsonStr = base64urlDecode(base64urlStr);
+                        const state = JSON.parse(jsonStr);
+                        if (state.notes || state.author) {
+                            localStorage.setItem('fw_closing_state', jsonStr);
+                            renderOpenNotes();
+                        }
+                    } catch(e) {
+                        console.error(e);
+                    }
+                }
+            })
+            .catch(err => console.error(err));
     }
 
     // ===== 4. 아코디언 동작 제어 =====
@@ -984,9 +1012,13 @@
         document.querySelectorAll('.warning-msg').forEach(el => el.style.display = 'none');
     }
 
+    let lastLocalChangeTime = 0;
+
     function saveState() {
         const author = localStorage.getItem('temp_author');
         if (!author) return;
+        
+        lastLocalChangeTime = Date.now();
         
         const state = { 
             singles: {}, subs: {}, powers: {}, radios: {}, 
@@ -1003,6 +1035,9 @@
         document.querySelectorAll('input[type="radio"]:checked').forEach(el => state.radios[el.name] = el.value);
 
         localStorage.setItem(`fw_closing_state_draft_${author}`, JSON.stringify(state));
+        
+        // 서버 드래프트 저장 업로드
+        uploadDraftsToServer(author, state);
     }
 
     function loadStateForAuthor(author) {
@@ -1072,18 +1107,37 @@
         const finalNotes = document.getElementById('open-notes').value;
         const currentAuthor = localStorage.getItem('temp_author') || "알 수 없음";
         
-        // 1. 오픈 근무자 전달용 공유 데이터 생성
-        localStorage.setItem('fw_closing_state', JSON.stringify({ 
+        const finalState = { 
             notes: finalNotes,
             author: currentAuthor,
             date: new Date().toDateString()
-        }));
+        };
         
-        // 2. 제출한 마감자의 드래프트 데이터 정리
+        // 1. 로컬 저장
+        localStorage.setItem('fw_closing_state', JSON.stringify(finalState));
         localStorage.removeItem(`fw_closing_state_draft_${currentAuthor}`);
         
-        alert("성공적으로 마감 데이터가 저장되었습니다!\n수고하셨습니다.");
-        location.reload(); 
+        // 2. 서버 업로드 동기화
+        const jsonStr = JSON.stringify(finalState);
+        const base64urlStr = base64urlEncode(jsonStr);
+        
+        fetch(UPDATE_URL_CLOSING_STATE_PREFIX + base64urlStr, {
+            method: 'POST',
+            body: '1',
+            headers: { 'Content-Type': 'text/plain' }
+        })
+        .then(() => {
+            // 3. 서버 드래프트 정리 및 리로드
+            removeDraftFromServer(currentAuthor, () => {
+                alert("성공적으로 마감 데이터가 저장되었습니다!\n수고하셨습니다.");
+                location.reload(); 
+            });
+        })
+        .catch(err => {
+            console.error(err);
+            alert("서버 전송 중 일부 불안정이 발생했으나, 로컬에는 안전하게 제출되었습니다.");
+            location.reload();
+        });
     }
 
     // ===== 6-1. 이스터에그 (디버그용 전체 마감 강제 완료 / 강제 리셋) =====
@@ -1741,7 +1795,121 @@
                 renderLoungeList();
             });
         }
+        if (document.getElementById('view-close').classList.contains('active')) {
+            syncDraftsFromServer();
+        }
     }, 5000);
+
+    // ===== 12. 오픈/마감 근무 실시간 동기화 추가 로직 =====
+    const SYNC_URL_CLOSING_STATE = `https://keyvalue.immanuel.co/api/KeyVal/GetValue/${SYNC_APP_KEY}/closing_state_v1`;
+    const SYNC_URL_CLOSING_DRAFTS = `https://keyvalue.immanuel.co/api/KeyVal/GetValue/${SYNC_APP_KEY}/closing_drafts_v1`;
+    const UPDATE_URL_CLOSING_STATE_PREFIX = `https://keyvalue.immanuel.co/api/KeyVal/UpdateValue/${SYNC_APP_KEY}/closing_state_v1?value=`;
+    const UPDATE_URL_CLOSING_DRAFTS_PREFIX = `https://keyvalue.immanuel.co/api/KeyVal/UpdateValue/${SYNC_APP_KEY}/closing_drafts_v1?value=`;
+
+    // 마감 드래프트 취합하여 서버 업로드
+    function uploadDraftsToServer(currentAuthor, currentState) {
+        const drafts = {};
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key.startsWith('fw_closing_state_draft_')) {
+                const author = key.substring('fw_closing_state_draft_'.length);
+                try {
+                    drafts[author] = JSON.parse(localStorage.getItem(key));
+                } catch(e) {}
+            }
+        }
+        drafts[currentAuthor] = currentState;
+
+        const jsonStr = JSON.stringify(drafts);
+        const base64urlStr = base64urlEncode(jsonStr);
+        
+        fetch(UPDATE_URL_CLOSING_DRAFTS_PREFIX + base64urlStr, {
+            method: 'POST',
+            body: '1',
+            headers: { 'Content-Type': 'text/plain' }
+        }).catch(err => console.error("Draft upload error", err));
+    }
+
+    // 서버 드래프트 다운로드하여 로컬 동기화
+    function syncDraftsFromServer(callback) {
+        const currentAuthor = localStorage.getItem('temp_author');
+        
+        fetch(SYNC_URL_CLOSING_DRAFTS + "?t=" + Date.now())
+            .then(res => res.text())
+            .then(resText => {
+                let base64urlStr = resText;
+                if (base64urlStr && base64urlStr.startsWith('"') && base64urlStr.endsWith('"')) {
+                    base64urlStr = base64urlStr.slice(1, -1);
+                }
+                if (base64urlStr && base64urlStr.trim() !== '') {
+                    try {
+                        const jsonStr = base64urlDecode(base64urlStr);
+                        const drafts = JSON.parse(jsonStr);
+                        
+                        let updatedCurrentAuthorDraft = false;
+                        
+                        for (const [author, state] of Object.entries(drafts)) {
+                            const localKey = `fw_closing_state_draft_${author}`;
+                            const localSavedStr = localStorage.getItem(localKey);
+                            const serverSavedStr = JSON.stringify(state);
+                            
+                            if (localSavedStr !== serverSavedStr) {
+                                // 로컬 작업 중 덮어쓰기 방지 (최근 8초 이내 동작 시 잠금)
+                                if (author === currentAuthor && (Date.now() - lastLocalChangeTime < 8000)) {
+                                    continue;
+                                }
+                                
+                                localStorage.setItem(localKey, serverSavedStr);
+                                if (author === currentAuthor) {
+                                    updatedCurrentAuthorDraft = true;
+                                }
+                            }
+                        }
+                        
+                        if (updatedCurrentAuthorDraft && currentAuthor) {
+                            loadStateForAuthor(currentAuthor);
+                        }
+                    } catch(e) {
+                        console.error("Failed to parse synced drafts", e);
+                    }
+                }
+                if (callback) callback();
+            })
+            .catch(err => {
+                console.error("Draft sync error", err);
+                if (callback) callback();
+            });
+    }
+
+    // 제출 시 마감 완료된 근무자의 드래프트 정보를 서버에서 깔끔하게 제거
+    function removeDraftFromServer(author, callback) {
+        const drafts = {};
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key.startsWith('fw_closing_state_draft_')) {
+                const auth = key.substring('fw_closing_state_draft_'.length);
+                if (auth !== author) {
+                    try {
+                        drafts[auth] = JSON.parse(localStorage.getItem(key));
+                    } catch(e) {}
+                }
+            }
+        }
+        
+        const jsonStr = JSON.stringify(drafts);
+        const base64urlStr = base64urlEncode(jsonStr);
+        
+        fetch(UPDATE_URL_CLOSING_DRAFTS_PREFIX + base64urlStr, {
+            method: 'POST',
+            body: '1',
+            headers: { 'Content-Type': 'text/plain' }
+        })
+        .then(() => { if (callback) callback(); })
+        .catch(err => {
+            console.error(err);
+            if (callback) callback();
+        });
+    }
 
 </script>
 
