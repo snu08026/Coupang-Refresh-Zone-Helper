@@ -566,6 +566,25 @@
             </div>
         </div>
     </div>
+
+    <!-- [7] FaWW 라운지 상세 보기 화면 -->
+    <div id="view-lounge-detail" class="view-section">
+        <div class="lounge-container" style="min-height: calc(100vh - 80px);">
+            <div class="lounge-header" style="margin-bottom: 15px;">
+                <h2 style="color:var(--fw-green); font-weight:800; font-size:22px;">게시글 상세 보기</h2>
+                <p>게시글의 세부 내용을 확인합니다.</p>
+            </div>
+            
+            <!-- 상세 카드 -->
+            <div class="lounge-card" id="lounge-detail-card" style="flex: 1; padding: 24px; box-shadow: none; border-color: var(--border-color); background-color: #FAFAFA;">
+                <!-- JavaScript가 동적으로 생성 -->
+            </div>
+            
+            <div class="modal-buttons" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-color);">
+                <button class="btn-primary btn-home" style="margin-bottom: 0;" onclick="switchView('view-lounge')">목록으로 돌아가기</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -1376,36 +1395,86 @@
         sortedPosts.forEach((post) => {
             const card = document.createElement('div');
             card.className = 'lounge-card';
+            card.setAttribute('onclick', `openLoungeDetail('${storageKey}', '${post.id}')`);
+            card.style.cursor = 'pointer';
             if (post.pinned) {
                 card.style.borderColor = 'var(--fw-green)';
                 card.style.backgroundColor = '#F9FBF9'; // 연한 연두색 배경으로 고정 글 강조
             }
             card.innerHTML = `
-                <div class="lounge-card-meta">
-                    <span style="display: inline-flex; align-items: center;">
-                        👤 <strong style="margin-left: 3px;">${post.author}</strong>
-                        <button class="lounge-card-delete" onclick="deleteLoungePost('${storageKey}', '${post.id}')" title="삭제">🗑️</button>
-                    </span>
+                <div class="lounge-card-meta" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
+                    <span>👤 <strong style="margin-left: 3px;">${post.author}</strong></span>
                     <span>📅 ${post.date}</span>
                 </div>
-                <h4 class="lounge-card-title" style="margin: 0 0 10px 0; font-size: 16px; color: var(--text-main); font-weight: bold; line-height: 1.4; text-align: left; display: flex; align-items: center;">
+                <h4 class="lounge-card-title" style="margin: 8px 0 0 0; font-size: 16px; color: var(--text-main); font-weight: bold; line-height: 1.4; text-align: left; display: flex; align-items: center;">
                     ${post.pinned ? '<span style="background-color: var(--fw-green); color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-right: 6px; font-weight: bold; display: inline-block;">📌 고정</span>' : ''}
                     <span>${post.title || '제목 없음'}</span>
                 </h4>
-                <div class="lounge-card-content" style="text-align: left;">${post.content.replace(/\n/g, '<br>')}</div>
             `;
             container.appendChild(card);
         });
     }
 
-    function deleteLoungePost(storageKey, postId) {
+    let currentDetailPostId = null;
+    let currentDetailStorageKey = null;
+
+    function openLoungeDetail(storageKey, postId) {
+        currentDetailStorageKey = storageKey;
+        currentDetailPostId = postId;
+        
+        const stored = localStorage.getItem(storageKey);
+        if (!stored) return;
+        
+        try {
+            const posts = JSON.parse(stored);
+            const post = posts.find(p => p.id === postId);
+            if (!post) {
+                alert("게시글을 찾을 수 없습니다.");
+                return;
+            }
+            
+            const detailCard = document.getElementById('lounge-detail-card');
+            if (post.pinned) {
+                detailCard.style.borderColor = 'var(--fw-green)';
+                detailCard.style.backgroundColor = '#F9FBF9';
+            } else {
+                detailCard.style.borderColor = 'var(--border-color)';
+                detailCard.style.backgroundColor = '#FAFAFA';
+            }
+            
+            detailCard.innerHTML = `
+                <div class="lounge-card-meta" style="font-size: 13px; margin-bottom: 15px; border-bottom: 1px dashed #EEE; padding-bottom: 10px;">
+                    <span style="display: inline-flex; align-items: center;">
+                        👤 <strong style="margin-left: 3px;">작성자: ${post.author}</strong>
+                        <button class="lounge-card-delete" onclick="deleteLoungePostFromDetail()" title="삭제" style="margin-left: 10px;">🗑️ 삭제하기</button>
+                    </span>
+                    <span>📅 작성일: ${post.date}</span>
+                </div>
+                <h3 class="lounge-card-title" style="margin: 0 0 15px 0; font-size: 19px; color: var(--text-main); font-weight: bold; line-height: 1.4; display: flex; align-items: center; text-align: left;">
+                    ${post.pinned ? '<span style="background-color: var(--fw-green); color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; margin-right: 8px; font-weight: bold; display: inline-block;">📌 고정</span>' : ''}
+                    <span>${post.title || '제목 없음'}</span>
+                </h3>
+                <div class="lounge-card-content" style="text-align: left; font-size: 16px; line-height: 1.7; color: var(--text-main); margin-top: 15px; padding-top: 15px; border-top: 1px solid #EEE;">
+                    ${post.content.replace(/\n/g, '<br>')}
+                </div>
+            `;
+            
+            switchView('view-lounge-detail');
+        } catch(e) {
+            console.error(e);
+        }
+    }
+
+    function deleteLoungePostFromDetail() {
+        if (!currentDetailStorageKey || !currentDetailPostId) return;
+        
         if (confirm("정말로 이 글을 삭제하시겠습니까?")) {
-            const stored = localStorage.getItem(storageKey);
+            const stored = localStorage.getItem(currentDetailStorageKey);
             if (stored) {
                 try {
                     let posts = JSON.parse(stored);
-                    posts = posts.filter(p => p.id !== postId);
-                    localStorage.setItem(storageKey, JSON.stringify(posts));
+                    posts = posts.filter(p => p.id !== currentDetailPostId);
+                    localStorage.setItem(currentDetailStorageKey, JSON.stringify(posts));
                     
                     // 서버로 즉시 업로드 동기화
                     const notices = JSON.parse(localStorage.getItem('fw_lounge_notices')) || defaultNotices;
@@ -1413,7 +1482,7 @@
                     const shares = JSON.parse(localStorage.getItem('fw_lounge_info_share')) || defaultShares;
                     
                     uploadToServer(notices, losts, shares, () => {
-                        renderLoungeList();
+                        switchView('view-lounge');
                     });
                 } catch(e) {
                     console.error(e);
