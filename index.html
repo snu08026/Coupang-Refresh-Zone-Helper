@@ -1573,40 +1573,19 @@
     const SYNC_APP_KEY = 'datqf2xa';
     const SYNC_DATA_KEY = 'lounge_data_v1';
     const SYNC_URL = `https://keyvalue.immanuel.co/api/KeyVal/GetValue/${SYNC_APP_KEY}/${SYNC_DATA_KEY}`;
-    const UPDATE_URL_PREFIX = `https://keyvalue.immanuel.co/api/KeyVal/UpdateValue/${SYNC_APP_KEY}/${SYNC_DATA_KEY}/`;
-
-    // Base64url 인코더 & 디코더 (ASP.NET Request.Path 특수문자 검증 필터 바이패스용)
-    function base64urlEncode(str) {
-        const bytes = new TextEncoder().encode(str);
-        const binString = Array.from(bytes, byte => String.fromCharCode(byte)).join("");
-        const base64 = btoa(binString);
-        return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-    }
-
-    function base64urlDecode(str) {
-        let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
-        while (base64.length % 4) {
-            base64 += '=';
-        }
-        const binString = atob(base64);
-        const bytes = Uint8Array.from(binString, char => char.charCodeAt(0));
-        return new TextDecoder().decode(bytes);
-    }
 
     // 서버 데이터를 로컬 스토리지에 동기화
     function syncFromServer(callback) {
         fetch(SYNC_URL + "?t=" + Date.now())
             .then(res => res.text())
             .then(resText => {
-                let base64urlStr = resText;
-                if (base64urlStr && base64urlStr.startsWith('"') && base64urlStr.endsWith('"')) {
-                    base64urlStr = base64urlStr.slice(1, -1);
-                }
-                
-                if (base64urlStr && base64urlStr.trim() !== '') {
+                if (resText && resText.trim() !== '') {
                     try {
-                        const jsonStr = base64urlDecode(base64urlStr);
-                        const data = JSON.parse(jsonStr);
+                        // 첫 번째 파싱으로 이스케이프 해제
+                        const jsonStr = JSON.parse(resText);
+                        // 혹시 이미 객체인 경우와 문자열인 경우 모두 호환 파싱
+                        const data = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
+                        
                         if (data.notices && data.losts && data.shares) {
                             localStorage.setItem('fw_lounge_notices', JSON.stringify(data.notices));
                             localStorage.setItem('fw_lounge_lost_found', JSON.stringify(data.losts));
@@ -1636,13 +1615,14 @@
             });
     }
 
-    // 서버로 로컬 변경 데이터 업로드
+    // 서버로 로컬 변경 데이터 업로드 (?value= 쿼리 파라미터를 사용하여 IIS 260자 경로 길이 제한 및 특수문자 오류 해결)
     function uploadToServer(notices, losts, shares, callback) {
         const data = { notices, losts, shares };
         const jsonStr = JSON.stringify(data);
-        const base64urlStr = base64urlEncode(jsonStr);
+        const encodedVal = encodeURIComponent(jsonStr);
+        const updateUrl = `https://keyvalue.immanuel.co/api/KeyVal/UpdateValue/${SYNC_APP_KEY}/${SYNC_DATA_KEY}?value=${encodedVal}`;
         
-        fetch(UPDATE_URL_PREFIX + base64urlStr, { 
+        fetch(updateUrl, { 
             method: 'POST',
             body: '1',
             headers: {
