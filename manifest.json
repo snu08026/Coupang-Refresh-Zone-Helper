@@ -1,0 +1,16 @@
+{
+  "name": "Coupang Refresh Zone Helper",
+  "short_name": "Refresh Helper",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F5F6F8",
+  "theme_color": "#2E7D32",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "our_logo.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png"
+    }
+  ]
+}

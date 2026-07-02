@@ -9,6 +9,13 @@
     <meta property="og:description" content="피트니스 센터 오픈/마감 근무자용 통합 헬퍼 프로그램">
     <meta property="og:image" content="아가 파우미.png">
 
+    <!-- PWA 및 모바일 앱 설정 -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2E7D32">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="our_logo.png">
+
     <title>Coupang Refresh Zone with FaWW</title>
     <style>
         /* 라이트 테마 변수 */
@@ -672,6 +679,15 @@
 
     // 시작 시 데이터 로드
     window.onload = loadState;
+
+    // PWA 서비스 워커 등록
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('PWA Service Worker 등록 성공:', reg.scope))
+                .catch(err => console.error('PWA Service Worker 등록 실패:', err));
+        });
+    }
 
 </script>
 
