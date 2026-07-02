@@ -1165,7 +1165,7 @@
         });
 
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js')
+            navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
                 .then(reg => {
                     console.log('PWA Service Worker 등록 성공:', reg.scope);
                     
@@ -1232,12 +1232,12 @@
         }
     }
 
-    // ===== 9. 앱 강제 업데이트 기능 (캐시 무력화) =====
+    // ===== 9. 앱 강제 업데이트 기능 (캐시 무력화 및 등록 취소) =====
     function forceAppUpdate() {
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(registrations => {
                 for (let registration of registrations) {
-                    registration.update();
+                    registration.unregister(); // 기존 서비스 워커 아예 등록 취소
                 }
             });
         }
@@ -1248,8 +1248,10 @@
                 }
             });
         }
-        alert("이전 캐시를 완전히 비우고 최신 버전을 다운로드합니다.\n업데이트가 완료되면 앱이 새로고침됩니다.");
-        window.location.reload(true);
+        alert("이전 캐시와 서비스 워커를 완전히 삭제했습니다.\n확인을 누르면 웹에서 최신 버전을 다시 가져옵니다.");
+        setTimeout(() => {
+            window.location.reload(true);
+        }, 500);
     }
 
     // ===== 10. FaWW 라운지 비즈니스 로직 =====
