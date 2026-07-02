@@ -532,6 +532,10 @@
                 <label class="modal-label">작성자</label>
                 <input type="text" id="lounge-input-author" placeholder="이름을 입력하세요 (예: 이지희)" class="modal-input">
             </div>
+            <div style="margin-bottom: 15px; text-align: left;">
+                <label class="modal-label">제목</label>
+                <input type="text" id="lounge-input-title" placeholder="제목을 입력하세요" class="modal-input">
+            </div>
             <div style="margin-bottom: 20px; text-align: left;">
                 <label class="modal-label">내용</label>
                 <textarea id="lounge-input-content" placeholder="공유할 내용을 입력하세요" class="modal-textarea" style="height: 150px; margin-bottom: 0;"></textarea>
@@ -1258,18 +1262,18 @@
     let currentLoungeTab = 'notice';
     
     const defaultNotices = [
-        { id: 'n1', author: '센터 운영팀', content: '📢 쿠팡 리프레시 존 헬퍼 PWA 앱이 출시되었습니다!\n스마트폰 홈 화면에 추가하여 앱 형태로 편리하게 점검해보세요. 버그나 오류 사항은 단톡방에 알려주시기 바랍니다.', date: '2026. 7. 2.' },
-        { id: 'n2', author: '운영 총괄', content: '📢 샤워실 비품 정렬 및 마감 수거 규칙 준수 요청\n최근 마감 시 세탁물 수거함 비우기가 누락되는 건이 발생하고 있습니다. 체크리스트 1번 항목을 꼼꼼하게 점검하고 화물 엘리베이터 앞으로 옮겨주세요.', date: '2026. 7. 1.' }
+        { id: 'n1', title: '쿠팡 리프레시 존 헬퍼 PWA 앱 출시 안내', author: '센터 운영팀', content: '스마트폰 홈 화면에 추가하여 앱 형태로 편리하게 점검해보세요. 버그나 오류 사항은 단톡방에 알려주시기 바랍니다.', date: '2026. 7. 2.' },
+        { id: 'n2', title: '샤워실 비품 정렬 및 마감 수거 규칙 준수 요청', author: '운영 총괄', content: '최근 마감 시 세탁물 수거함 비우기가 누락되는 건이 발생하고 있습니다. 체크리스트 1번 항목을 꼼꼼하게 점검하고 화물 엘리베이터 앞으로 옮겨주세요.', date: '2026. 7. 1.' }
     ];
     
     const defaultLosts = [
-        { id: 'l1', author: '김동휘', content: '🔍 분실물 제보\n남자 탈의실 3번 락커 안 검은색 아디다스 안경집 발견하여 인포데스크 서랍에 보관해 두었습니다.', date: '2026. 7. 1.' },
-        { id: 'l2', author: '문채이', content: '🔍 분실물 제보\n여자 샤워실 2번 부스 앞 흰색 갤럭시 버즈 프로 한 쪽 발견했습니다. 인포데스크 분실물 바구니 확인해주세요.', date: '2026. 6. 30.' }
+        { id: 'l1', title: '남자 탈의실 안경집 분실물', author: '김동휘', content: '남자 탈의실 3번 락커 안 검은색 아디다스 안경집 발견하여 인포데스크 서랍에 보관해 두었습니다.', date: '2026. 7. 1.' },
+        { id: 'l2', title: '여자 샤워실 갤럭시 버즈 분실물', author: '문채이', content: '여자 샤워실 2번 부스 앞 흰색 갤럭시 버즈 프로 한 쪽 발견했습니다. 인포데스크 분실물 바구니 확인해주세요.', date: '2026. 6. 30.' }
     ];
     
     const defaultShares = [
-        { id: 's1', author: '이지희', content: '💡 오픈 조 꿀팁\n오전 수건 세탁물 카트 수거는 9시 30분 이전에 해두시는 게 헬스장 혼잡 시간대와 겹치지 않아 훨씬 수월합니다.', date: '2026. 7. 2.' },
-        { id: 's2', author: '이동현', content: '💡 마감 청소 팁\n마감 시 샤워부스 청소하고 바닥 밀대(스퀴지)로 물기를 싹 쓸어내 주셔야 다음 날 아침 냄새 예방에 좋습니다.', date: '2026. 7. 1.' }
+        { id: 's1', title: '오픈 조 꿀팁 (수건 수거 시간)', author: '이지희', content: '오전 수건 세탁물 카트 수거는 9시 30분 이전에 해두시는 게 헬스장 혼잡 시간대와 겹치지 않아 훨씬 수월합니다.', date: '2026. 7. 2.' },
+        { id: 's2', title: '마감 청소 팁 (스퀴지 사용)', author: '이동현', content: '마감 시 샤워부스 청소하고 바닥 밀대(스퀴지)로 물기를 싹 쓸어내 주셔야 다음 날 아침 냄새 예방에 좋습니다.', date: '2026. 7. 1.' }
     ];
 
     function switchLoungeTab(tabName) {
@@ -1328,7 +1332,8 @@
                     <span>👤 ${post.author}</span>
                     <span>📅 ${post.date}</span>
                 </div>
-                <div class="lounge-card-content">${post.content.replace(/\n/g, '<br>')}</div>
+                <h4 class="lounge-card-title" style="margin: 0 0 10px 0; font-size: 16px; color: var(--fw-green); font-weight: bold; line-height: 1.4; text-align: left;">${post.title || '제목 없음'}</h4>
+                <div class="lounge-card-content" style="text-align: left;">${post.content.replace(/\n/g, '<br>')}</div>
                 <button class="lounge-card-delete" onclick="deleteLoungePost('${storageKey}', ${index})">🗑️</button>
             `;
             container.appendChild(card);
@@ -1364,6 +1369,7 @@
         }
         
         document.getElementById('lounge-input-author').value = '';
+        document.getElementById('lounge-input-title').value = '';
         document.getElementById('lounge-input-content').value = '';
         modal.style.display = 'flex';
     }
@@ -1374,10 +1380,15 @@
 
     function submitLoungePost() {
         const author = document.getElementById('lounge-input-author').value.trim();
+        const title = document.getElementById('lounge-input-title').value.trim();
         const content = document.getElementById('lounge-input-content').value.trim();
         
         if (!author) {
             alert("작성자 이름을 입력해주세요!");
+            return;
+        }
+        if (!title) {
+            alert("제목을 입력해주세요!");
             return;
         }
         if (!content) {
@@ -1407,6 +1418,7 @@
         const newPost = {
             id: Date.now().toString(),
             author: author,
+            title: title,
             content: content,
             date: new Date().toLocaleDateString()
         };
