@@ -1,9 +1,10 @@
-const CACHE_NAME = 'refresh-helper-v1';
+const CACHE_NAME = 'refresh-helper-v2';
 const ASSETS = [
   './',
   './index.html',
   './coupang_logo.png',
-  './our_logo.png'
+  './our_logo.png',
+  './아가 파우미.png'
 ];
 
 self.addEventListener('install', (e) => {
