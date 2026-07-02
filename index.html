@@ -282,6 +282,64 @@
         .btn-back { background-color: #FFF; color: #333; border: 1px solid #CCC; margin-top: 5px; }
         .btn-back:active { transform: scale(0.98); background-color: #F5F5F5; }
 
+        /* ===== FaWW 라운지 스타일 ===== */
+        .lounge-container { padding: 20px; display: flex; flex-direction: column; min-height: calc(100vh - 120px); }
+        .lounge-header { margin-bottom: 20px; text-align: center; }
+        .lounge-header h2 { font-size: 22px; font-weight: 800; color: var(--fw-green); margin: 0 0 5px 0; }
+        .lounge-header p { font-size: 13px; color: var(--text-muted); margin: 0; }
+        
+        .lounge-tabs { display: flex; gap: 8px; margin-bottom: 15px; }
+        .lounge-tab-btn {
+            flex: 1; padding: 12px 6px; border: 1px solid var(--border-color); background-color: #FFFFFF;
+            border-radius: 10px; font-weight: bold; font-size: 13px; cursor: pointer; text-align: center; color: var(--text-muted);
+            transition: all 0.2s; box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+        }
+        .lounge-tab-btn.active {
+            background-color: var(--fw-green); color: #FFFFFF; border-color: var(--fw-green);
+            box-shadow: 0 4px 10px rgba(46, 125, 50, 0.2);
+        }
+        
+        .lounge-content { flex: 1; min-height: 250px; margin-bottom: 20px; }
+        .lounge-post-list { display: flex; flex-direction: column; gap: 12px; }
+        
+        .lounge-card {
+            background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 12px;
+            padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); position: relative;
+            transition: transform 0.2s;
+        }
+        .lounge-card:active { transform: scale(0.99); }
+        .lounge-card-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 8px; font-weight: 600; border-bottom: 1px dashed #EEE; padding-bottom: 6px; }
+        .lounge-card-content { font-size: 15px; color: var(--text-main); line-height: 1.5; white-space: pre-wrap; word-break: break-all; margin-right: 25px; }
+        
+        .lounge-card-delete {
+            position: absolute; top: 12px; right: 12px; background: none; border: none;
+            color: var(--warning-red); font-size: 16px; cursor: pointer; padding: 4px;
+        }
+        
+        .lounge-write-box { margin-top: auto; padding-top: 15px; border-top: 1px solid var(--border-color); }
+        
+        .lounge-modal-backdrop {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center;
+            z-index: 1000; padding: 20px;
+        }
+        .lounge-modal-content {
+            background: #FFFFFF; border-radius: 16px; padding: 24px; width: 100%; max-width: 400px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15); animation: modalOpen 0.3s ease-out;
+        }
+        @keyframes modalOpen {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modal-label { font-size: 14px; font-weight: bold; color: var(--fw-green); display: block; margin-bottom: 8px; }
+        .modal-input { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px; box-sizing: border-box; }
+        .modal-input:focus { outline: none; border-color: var(--fw-green); }
+        .modal-textarea { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px; resize: none; font-family: inherit; box-sizing: border-box; }
+        .modal-textarea:focus { outline: none; border-color: var(--fw-green); }
+        .modal-buttons { display: flex; gap: 10px; }
+        
+        .lounge-empty { text-align: center; color: var(--text-muted); padding: 40px 10px; font-style: italic; font-size: 14px; }
+
     </style>
 </head>
 <body>
@@ -313,6 +371,10 @@
             <button class="role-btn" onclick="switchView('view-select-member')">
                 🌙 마감 근무
                 <span>구역별 마감 체크리스트 및 비품 점검</span>
+            </button>
+            <button class="role-btn" onclick="switchView('view-lounge')" style="border-color: var(--fw-green); background-color: #F1F8F5;">
+                ☕ FaWW 라운지
+                <span style="color: var(--fw-green); font-weight: 600;">공지사항, 분실물 기록 및 근무 팁 공유</span>
             </button>
 
             <!-- 버전 정보 및 강제 업데이트 버튼 -->
@@ -431,6 +493,55 @@
             <button class="btn-primary btn-home" style="margin-top:10px;" onclick="switchView('view-home')">홈으로 가기</button>
         </div>
     </div>
+
+    <!-- [5] FaWW 라운지 화면 -->
+    <div id="view-lounge" class="view-section">
+        <div class="lounge-container">
+            <div class="lounge-header">
+                <h2>☕ FaWW 라운지</h2>
+                <p>공지사항과 업무 정보를 자유롭게 공유하는 소통 공간입니다.</p>
+            </div>
+            
+            <!-- 라운지 탭 메뉴 -->
+            <div class="lounge-tabs">
+                <button class="lounge-tab-btn active" onclick="switchLoungeTab('notice')">📢 공지사항</button>
+                <button class="lounge-tab-btn" onclick="switchLoungeTab('lost')">🔍 분실물 기록</button>
+                <button class="lounge-tab-btn" onclick="switchLoungeTab('share')">💡 정보 공유</button>
+            </div>
+            
+            <!-- 탭 콘텐츠 목록 -->
+            <div class="lounge-content">
+                <div id="lounge-list-container" class="lounge-post-list">
+                    <!-- 동적 카드 삽입 -->
+                </div>
+            </div>
+            
+            <!-- 글쓰기 영역 -->
+            <div class="lounge-write-box">
+                <button class="btn-primary" style="background-color: var(--fw-green); color: white; margin-bottom: 12px;" onclick="openLoungeWriteForm()">✍️ 새 글 작성하기</button>
+                <button class="btn-primary btn-home" onclick="switchView('view-home')">홈으로 돌아가기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 글쓰기 모달 (Modal) -->
+    <div id="lounge-modal" class="lounge-modal-backdrop" style="display: none;">
+        <div class="lounge-modal-content">
+            <h3 id="lounge-modal-title" style="margin-top:0; color:var(--fw-green);">새 글 작성</h3>
+            <div style="margin-bottom: 15px; text-align: left;">
+                <label class="modal-label">작성자</label>
+                <input type="text" id="lounge-input-author" placeholder="이름을 입력하세요 (예: 이지희)" class="modal-input">
+            </div>
+            <div style="margin-bottom: 20px; text-align: left;">
+                <label class="modal-label">내용</label>
+                <textarea id="lounge-input-content" placeholder="공유할 내용을 입력하세요" class="modal-textarea" style="height: 150px; margin-bottom: 0;"></textarea>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-primary" style="background-color: #FAFAFA; border: 1px solid var(--border-color); color: var(--text-main); margin-bottom: 0; flex: 1; padding: 12px;" onclick="closeLoungeWriteForm()">취소</button>
+                <button class="btn-primary" style="background-color: var(--fw-green); color: white; margin-bottom: 0; flex: 1; padding: 12px;" onclick="submitLoungePost()">등록하기</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -513,6 +624,10 @@
 
         if (viewId === 'view-open') loadNotesForOpen();
         if (viewId === 'view-close') window.scrollTo(0, 0);
+        if (viewId === 'view-lounge') {
+            window.scrollTo(0, 0);
+            renderLoungeList();
+        }
     }
 
     function loadNotesForOpen() {
@@ -1135,6 +1250,170 @@
         }
         alert("이전 캐시를 완전히 비우고 최신 버전을 다운로드합니다.\n업데이트가 완료되면 앱이 새로고침됩니다.");
         window.location.reload(true);
+    }
+
+    // ===== 10. FaWW 라운지 비즈니스 로직 =====
+    let currentLoungeTab = 'notice';
+    
+    const defaultNotices = [
+        { id: 'n1', author: '센터 운영팀', content: '📢 쿠팡 리프레시 존 헬퍼 PWA 앱이 출시되었습니다!\n스마트폰 홈 화면에 추가하여 앱 형태로 편리하게 점검해보세요. 버그나 오류 사항은 단톡방에 알려주시기 바랍니다.', date: '2026. 7. 2.' },
+        { id: 'n2', author: '운영 총괄', content: '📢 샤워실 비품 정렬 및 마감 수거 규칙 준수 요청\n최근 마감 시 세탁물 수거함 비우기가 누락되는 건이 발생하고 있습니다. 체크리스트 1번 항목을 꼼꼼하게 점검하고 화물 엘리베이터 앞으로 옮겨주세요.', date: '2026. 7. 1.' }
+    ];
+    
+    const defaultLosts = [
+        { id: 'l1', author: '김동휘', content: '🔍 분실물 제보\n남자 탈의실 3번 락커 안 검은색 아디다스 안경집 발견하여 인포데스크 서랍에 보관해 두었습니다.', date: '2026. 7. 1.' },
+        { id: 'l2', author: '문채이', content: '🔍 분실물 제보\n여자 샤워실 2번 부스 앞 흰색 갤럭시 버즈 프로 한 쪽 발견했습니다. 인포데스크 분실물 바구니 확인해주세요.', date: '2026. 6. 30.' }
+    ];
+    
+    const defaultShares = [
+        { id: 's1', author: '이지희', content: '💡 오픈 조 꿀팁\n오전 수건 세탁물 카트 수거는 9시 30분 이전에 해두시는 게 헬스장 혼잡 시간대와 겹치지 않아 훨씬 수월합니다.', date: '2026. 7. 2.' },
+        { id: 's2', author: '이동현', content: '💡 마감 청소 팁\n마감 시 샤워부스 청소하고 바닥 밀대(스퀴지)로 물기를 싹 쓸어내 주셔야 다음 날 아침 냄새 예방에 좋습니다.', date: '2026. 7. 1.' }
+    ];
+
+    function switchLoungeTab(tabName) {
+        currentLoungeTab = tabName;
+        document.querySelectorAll('.lounge-tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        const clickedBtn = Array.from(document.querySelectorAll('.lounge-tab-btn')).find(btn => btn.getAttribute('onclick').includes(tabName));
+        if (clickedBtn) clickedBtn.classList.add('active');
+        
+        renderLoungeList();
+    }
+
+    function renderLoungeList() {
+        const container = document.getElementById('lounge-list-container');
+        container.innerHTML = '';
+        
+        let posts = [];
+        let defaultData = [];
+        let storageKey = '';
+        
+        if (currentLoungeTab === 'notice') {
+            storageKey = 'fw_lounge_notices';
+            defaultData = defaultNotices;
+        } else if (currentLoungeTab === 'lost') {
+            storageKey = 'fw_lounge_lost_found';
+            defaultData = defaultLosts;
+        } else {
+            storageKey = 'fw_lounge_info_share';
+            defaultData = defaultShares;
+        }
+        
+        const stored = localStorage.getItem(storageKey);
+        if (stored) {
+            try {
+                posts = JSON.parse(stored);
+            } catch(e) {
+                console.error(e);
+                posts = defaultData;
+            }
+        } else {
+            posts = defaultData;
+            localStorage.setItem(storageKey, JSON.stringify(defaultData));
+        }
+        
+        if (posts.length === 0) {
+            container.innerHTML = '<div class="lounge-empty">등록된 글이 없습니다.</div>';
+            return;
+        }
+        
+        posts.forEach((post, index) => {
+            const card = document.createElement('div');
+            card.className = 'lounge-card';
+            card.innerHTML = `
+                <div class="lounge-card-meta">
+                    <span>👤 ${post.author}</span>
+                    <span>📅 ${post.date}</span>
+                </div>
+                <div class="lounge-card-content">${post.content.replace(/\n/g, '<br>')}</div>
+                <button class="lounge-card-delete" onclick="deleteLoungePost('${storageKey}', ${index})">🗑️</button>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function deleteLoungePost(storageKey, index) {
+        if (confirm("정말로 이 글을 삭제하시겠습니까?")) {
+            const stored = localStorage.getItem(storageKey);
+            if (stored) {
+                try {
+                    const posts = JSON.parse(stored);
+                    posts.splice(index, 1);
+                    localStorage.setItem(storageKey, JSON.stringify(posts));
+                    renderLoungeList();
+                } catch(e) {
+                    console.error(e);
+                }
+            }
+        }
+    }
+
+    function openLoungeWriteForm() {
+        const modal = document.getElementById('lounge-modal');
+        const modalTitle = document.getElementById('lounge-modal-title');
+        
+        if (currentLoungeTab === 'notice') {
+            modalTitle.textContent = '📢 공지사항 작성';
+        } else if (currentLoungeTab === 'lost') {
+            modalTitle.textContent = '🔍 분실물 기록 등록';
+        } else {
+            modalTitle.textContent = '💡 정보 공유 작성';
+        }
+        
+        document.getElementById('lounge-input-author').value = '';
+        document.getElementById('lounge-input-content').value = '';
+        modal.style.display = 'flex';
+    }
+
+    function closeLoungeWriteForm() {
+        document.getElementById('lounge-modal').style.display = 'none';
+    }
+
+    function submitLoungePost() {
+        const author = document.getElementById('lounge-input-author').value.trim();
+        const content = document.getElementById('lounge-input-content').value.trim();
+        
+        if (!author) {
+            alert("작성자 이름을 입력해주세요!");
+            return;
+        }
+        if (!content) {
+            alert("내용을 입력해주세요!");
+            return;
+        }
+        
+        let storageKey = '';
+        if (currentLoungeTab === 'notice') {
+            storageKey = 'fw_lounge_notices';
+        } else if (currentLoungeTab === 'lost') {
+            storageKey = 'fw_lounge_lost_found';
+        } else {
+            storageKey = 'fw_lounge_info_share';
+        }
+        
+        let posts = [];
+        const stored = localStorage.getItem(storageKey);
+        if (stored) {
+            try {
+                posts = JSON.parse(stored);
+            } catch(e) {
+                console.error(e);
+            }
+        }
+        
+        const newPost = {
+            id: Date.now().toString(),
+            author: author,
+            content: content,
+            date: new Date().toLocaleDateString()
+        };
+        
+        posts.unshift(newPost);
+        localStorage.setItem(storageKey, JSON.stringify(posts));
+        
+        closeLoungeWriteForm();
+        renderLoungeList();
     }
 
 </script>
