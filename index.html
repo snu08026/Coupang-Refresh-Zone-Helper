@@ -312,6 +312,7 @@
             <div class="home-title">근무자를 선택해주세요</div>
             <div class="member-grid" id="member-grid"></div>
             <button class="btn-primary btn-home" style="margin-top:30px;" onclick="switchView('view-home')">홈으로 돌아가기</button>
+            <button class="btn-primary btn-back" onclick="switchView('view-home')">뒤로 가기</button>
         </div>
     </div>
 
@@ -385,7 +386,8 @@
             <label class="notes-label">📝 다음 날 오픈 직원을 위한 특이사항</label>
             <textarea id="open-notes" placeholder="오픈 근무자에게 전달할 내용이나 부족한 비품 등 특이사항을 적어주세요."></textarea>
             <button class="btn-primary btn-submit" id="submit-btn" onclick="submitClosing()">최종 마감 완료</button>
-            <button class="btn-primary btn-back" onclick="switchView('view-home')">홈으로 가기</button>
+            <button class="btn-primary btn-back" onclick="switchView('view-select-member')">뒤로 가기 (근무자 재선택)</button>
+            <button class="btn-primary btn-home" style="margin-top:10px;" onclick="switchView('view-home')">홈으로 가기</button>
         </div>
     </div>
 </div>
