@@ -754,11 +754,35 @@
         document.getElementById('header-date').textContent = `${year}년 ${month}월 ${date}일 ${dayOfWeek}`;
     };
 
-    // PWA 서비스 워커 등록
+    // PWA 서비스 워커 등록 (업데이트 발견 시 즉각 강제 새로고침 기능 포함)
     if ('serviceWorker' in navigator) {
+        let refreshing = false;
+        
+        // 서비스 워커가 새로 교체되면 페이지를 자동 새로고침하여 캐시 무력화
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!refreshing) {
+                refreshing = true;
+                window.location.reload();
+            }
+        });
+
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('./sw.js')
-                .then(reg => console.log('PWA Service Worker 등록 성공:', reg.scope))
+                .then(reg => {
+                    console.log('PWA Service Worker 등록 성공:', reg.scope);
+                    
+                    // 새 서비스 워커가 설치를 끝마치고 활성화될 때를 감지하여 리로드
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        if (newWorker) {
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'activated') {
+                                    window.location.reload();
+                                }
+                            });
+                        }
+                    });
+                })
                 .catch(err => console.error('PWA Service Worker 등록 실패:', err));
         });
     }
