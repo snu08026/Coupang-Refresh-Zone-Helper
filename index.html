@@ -288,7 +288,7 @@
             <h1>Coupang Refresh Zone with FaWW</h1>
             <div id="header-date" class="header-date"></div>
         </div>
-        <img src="our_logo.png" alt="FW" onerror="this.style.display='none'">
+        <img id="our-logo" src="our_logo.png" alt="FW" onerror="this.style.display='none'" onclick="triggerEasterEgg()" style="cursor: pointer;">
     </header>
 
     <!-- [1] 홈 화면 -->
@@ -394,6 +394,8 @@
 
 <script>
     // ===== 1. 전역 변수 및 초기화 =====
+    let logoClickCount = 0;
+    let logoClickTimeout;
     const members = ["이지희", "이동현", "류재진", "나강현", "김동휘", "문채이"];
     const showerConfig = { female: [1, 2, 3, 4], male: [1, 2, 3, 4, 5] };
     const supplyList = ['샴푸', '린스', '바디워시'];
@@ -766,6 +768,43 @@
         
         alert("성공적으로 마감 데이터가 저장되었습니다!\n수고하셨습니다.");
         location.reload(); 
+    }
+
+    // ===== 6-1. 이스터에그 (디버그용 전체 마감 강제 완료) =====
+    function triggerEasterEgg() {
+        if (!document.getElementById('view-close').classList.contains('active')) return;
+        
+        logoClickCount++;
+        clearTimeout(logoClickTimeout);
+        
+        if (logoClickCount >= 3) {
+            logoClickCount = 0;
+            forceCompleteAll();
+        } else {
+            logoClickTimeout = setTimeout(() => {
+                logoClickCount = 0;
+            }, 1000); // 1초 내에 3번 클릭해야 작동
+        }
+    }
+
+    function forceCompleteAll() {
+        // 1. 모든 일반 단일 테스크 체크
+        document.querySelectorAll('.single-task input[type="checkbox"]').forEach(el => el.checked = true);
+        
+        // 2. 4번 샤워실 체크
+        document.querySelectorAll('.power-check').forEach(el => el.checked = true);
+        document.querySelectorAll('input[type="radio"][value="high"]').forEach(el => el.checked = true);
+        
+        // 3. 9번 웰빙 스튜디오 체크
+        document.querySelectorAll('.studio-sub').forEach(el => el.checked = true);
+        
+        // 4. 로직 실행 및 상태 저장
+        checkShowerLogic();
+        checkStudioLogic();
+        saveState();
+        updateOverallProgress();
+        
+        alert("🌟 이스터에그 작동: 모든 체크리스트가 강제 마감되었습니다!");
     }
 
     // ===== 7. 이벤트 리스너 바인딩 =====
