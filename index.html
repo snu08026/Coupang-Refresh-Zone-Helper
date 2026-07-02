@@ -1417,6 +1417,7 @@
 
     let currentDetailPostId = null;
     let currentDetailStorageKey = null;
+    let editingPostId = null;
 
     function openLoungeDetail(storageKey, postId) {
         currentDetailStorageKey = storageKey;
@@ -1443,12 +1444,18 @@
             }
             
             detailCard.innerHTML = `
-                <div class="lounge-card-meta" style="font-size: 13px; margin-bottom: 15px; border-bottom: 1px dashed #EEE; padding-bottom: 10px;">
+                <div class="lounge-card-meta" style="font-size: 13px; margin-bottom: 15px; border-bottom: 1px dashed #EEE; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                     <span style="display: inline-flex; align-items: center;">
                         👤 <strong style="margin-left: 3px;">작성자: ${post.author}</strong>
-                        <button class="lounge-card-delete" onclick="deleteLoungePostFromDetail()" title="삭제" style="margin-left: 10px;">🗑️ 삭제하기</button>
                     </span>
-                    <span>📅 작성일: ${post.date}</span>
+                    <span style="display: inline-flex; align-items: center; gap: 6px;">
+                        <button class="lounge-btn-edit" onclick="editLoungePost()" style="background-color: #EEE; border: 1px solid #CCC; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; color: var(--text-main); font-weight: bold;">✏️ 수정</button>
+                        <button class="lounge-btn-pin" onclick="togglePinLoungePost()" style="background-color: #E8F5E9; border: 1px solid #C8E6C9; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; color: var(--fw-green); font-weight: bold;">
+                            ${post.pinned ? '📌 고정 해제' : '📌 상단 고정'}
+                        </button>
+                        <button class="lounge-card-delete" onclick="deleteLoungePostFromDetail()" title="삭제" style="background-color: #FFEBEE; border: 1px solid #FFCDD2; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; color: #C62828; font-weight: bold; margin: 0;">🗑️ 삭제</button>
+                    </span>
+                    <span style="width: 100%; text-align: right; font-size: 11px; color: #888; margin-top: 4px;">📅 작성일: ${post.date}</span>
                 </div>
                 <h3 class="lounge-card-title" style="margin: 0 0 15px 0; font-size: 19px; color: var(--text-main); font-weight: bold; line-height: 1.4; display: flex; align-items: center; text-align: left;">
                     ${post.pinned ? '<span style="background-color: var(--fw-green); color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; margin-right: 8px; font-weight: bold; display: inline-block;">📌 고정</span>' : ''}
@@ -1460,6 +1467,61 @@
             `;
             
             switchView('view-lounge-detail');
+        } catch(e) {
+            console.error(e);
+        }
+    }
+
+    function togglePinLoungePost() {
+        if (!currentDetailStorageKey || !currentDetailPostId) return;
+        
+        const stored = localStorage.getItem(currentDetailStorageKey);
+        if (!stored) return;
+        
+        try {
+            let posts = JSON.parse(stored);
+            const postIndex = posts.findIndex(p => p.id === currentDetailPostId);
+            if (postIndex === -1) return;
+            
+            // 고정 상태 토글
+            posts[postIndex].pinned = !posts[postIndex].pinned;
+            localStorage.setItem(currentDetailStorageKey, JSON.stringify(posts));
+            
+            // 서버로 즉시 업로드 동기화
+            const notices = JSON.parse(localStorage.getItem('fw_lounge_notices')) || defaultNotices;
+            const losts = JSON.parse(localStorage.getItem('fw_lounge_lost_found')) || defaultLosts;
+            const shares = JSON.parse(localStorage.getItem('fw_lounge_info_share')) || defaultShares;
+            
+            uploadToServer(notices, losts, shares, () => {
+                // 상세 보기 화면 다시 로드하여 고정 상태 UI 갱신
+                openLoungeDetail(currentDetailStorageKey, currentDetailPostId);
+            });
+        } catch(e) {
+            console.error(e);
+        }
+    }
+
+    function editLoungePost() {
+        if (!currentDetailStorageKey || !currentDetailPostId) return;
+        
+        const stored = localStorage.getItem(currentDetailStorageKey);
+        if (!stored) return;
+        
+        try {
+            const posts = JSON.parse(stored);
+            const post = posts.find(p => p.id === currentDetailPostId);
+            if (!post) return;
+            
+            editingPostId = post.id;
+            
+            // 글쓰기 폼 채우기
+            document.getElementById('lounge-write-view-title').textContent = '📝 게시글 수정';
+            document.getElementById('lounge-write-author').value = post.author;
+            document.getElementById('lounge-write-title').value = post.title;
+            document.getElementById('lounge-write-content').value = post.content;
+            document.getElementById('lounge-write-pinned').checked = post.pinned;
+            
+            switchView('view-lounge-write');
         } catch(e) {
             console.error(e);
         }
@@ -1493,6 +1555,7 @@
 
     function openLoungeWriteForm() {
         const writeTitle = document.getElementById('lounge-write-view-title');
+        editingPostId = null; // 새 글 등록이므로 수정 모드 리셋
         
         if (currentLoungeTab === 'notice') {
             writeTitle.textContent = '📢 공지사항 작성';
@@ -1514,6 +1577,7 @@
         const author = document.getElementById('lounge-write-author').value.trim();
         const title = document.getElementById('lounge-write-title').value.trim();
         const content = document.getElementById('lounge-write-content').value.trim();
+        const pinned = document.getElementById('lounge-write-pinned').checked;
         
         if (!author) {
             alert("작성자 이름을 입력해주세요!");
@@ -1547,16 +1611,29 @@
             }
         }
         
-        const newPost = {
-            id: Date.now().toString(),
-            author: author,
-            title: title,
-            content: content,
-            pinned: document.getElementById('lounge-write-pinned').checked,
-            date: new Date().toLocaleDateString()
-        };
+        if (editingPostId) {
+            // 수정 모드
+            const postIndex = posts.findIndex(p => p.id === editingPostId);
+            if (postIndex !== -1) {
+                posts[postIndex].author = author;
+                posts[postIndex].title = title;
+                posts[postIndex].content = content;
+                posts[postIndex].pinned = pinned;
+            }
+            editingPostId = null; // 수정 모드 리셋
+        } else {
+            // 새 글 등록 모드
+            const newPost = {
+                id: Date.now().toString(),
+                author: author,
+                title: title,
+                content: content,
+                pinned: pinned,
+                date: new Date().toLocaleDateString()
+            };
+            posts.unshift(newPost);
+        }
         
-        posts.unshift(newPost);
         localStorage.setItem(storageKey, JSON.stringify(posts));
         
         // 서버로 즉시 업로드 동기화
