@@ -469,8 +469,25 @@
             try {
                 const state = JSON.parse(saved);
                 if (state.notes && state.notes.trim() !== '') {
-                    // 작성자 태그 추가
-                    displayArea.innerHTML = `<span class="author-tag">작성자: ${state.author || '알 수 없음'}</span>${state.notes.replace(/\n/g, '<br>')}`;
+                    // 작성자 이름 옆에 날짜 추가 (포맷팅: YYYY년 M월 D일 dddd요일)
+                    let dateStr = "";
+                    if (state.date) {
+                        try {
+                            const d = new Date(state.date);
+                            if (!isNaN(d.getTime())) {
+                                const year = d.getFullYear();
+                                const month = d.getMonth() + 1;
+                                const dateVal = d.getDate();
+                                const dayNames = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
+                                const dayOfWeek = dayNames[d.getDay()];
+                                dateStr = ` (${year}년 ${month}월 ${dateVal}일 ${dayOfWeek})`;
+                            }
+                        } catch (err) {
+                            console.error(err);
+                        }
+                    }
+                    
+                    displayArea.innerHTML = `<span class="author-tag">작성자: ${state.author || '알 수 없음'}${dateStr}</span>${state.notes.replace(/\n/g, '<br>')}`;
                     displayArea.classList.remove('no-notes');
                 } else {
                     displayArea.innerHTML = '<div class="no-notes">전달된 특이사항이 없습니다.</div>';
