@@ -369,7 +369,18 @@
                 <label class="check-item sub-check"><input type="checkbox" class="locker-sub" data-id="sub-2-1"> <span>남자 탈의실 확인 완료</span></label>
                 <label class="check-item sub-check"><input type="checkbox" class="locker-sub" data-id="sub-2-2"> <span>여자 탈의실 확인 완료</span></label>
             </div>
-            <label class="check-item single-task" data-id="task-3"><input type="checkbox"> <span>3. 탈의실 샤워 매트 걷어두기</span></label>
+            <!-- 3번: 샤워 매트 걷어두기 (아코디언) -->
+            <div class="accordion-header" onclick="toggleAccordion('mat-acc', 'arrow-3')">
+                <div style="display: flex; align-items: flex-start; flex: 1;">
+                    <input type="checkbox" id="main-check-3" style="pointer-events: none;">
+                    <span style="font-size: 16px; margin-top: 3px;">3. 탈의실 샤워 매트 걷어두기</span>
+                </div>
+                <span class="arrow" id="arrow-3">▼</span>
+            </div>
+            <div id="mat-acc" class="accordion-content">
+                <label class="check-item sub-check"><input type="checkbox" class="mat-sub" data-id="sub-3-1"> <span>남자 샤워실 완료</span></label>
+                <label class="check-item sub-check"><input type="checkbox" class="mat-sub" data-id="sub-3-2"> <span>여자 샤워실 완료</span></label>
+            </div>
 
             <!-- 4번: 샤워실 (아코디언) -->
             <div class="accordion-header" onclick="toggleAccordion('shower-acc', 'arrow-4')">
@@ -636,6 +647,34 @@
         saveState(); updateOverallProgress();
     }
 
+    // 3번 샤워 매트 확인 메인 탭 자동 검증 및 닫힘 로직
+    function checkMatLogic() {
+        const subs = document.querySelectorAll('.mat-sub');
+        let allChecked = true;
+        subs.forEach(s => { 
+            if(!s.checked) allChecked = false;
+            if(s.checked) s.closest('.check-item').classList.add('completed');
+            else s.closest('.check-item').classList.remove('completed');
+        });
+
+        const main3 = document.getElementById('main-check-3');
+        main3.checked = allChecked;
+        
+        if(allChecked) {
+            main3.closest('.accordion-header').classList.add('completed');
+            const content = document.getElementById('mat-acc');
+            if (content.classList.contains('active')) {
+                setTimeout(() => {
+                    content.classList.remove('active');
+                    document.getElementById('arrow-3').classList.remove('open');
+                }, 600);
+            }
+        } else {
+            main3.closest('.accordion-header').classList.remove('completed');
+        }
+        saveState(); updateOverallProgress();
+    }
+
     function checkShowerLogic() {
         let allValid = true;
         let anyBoothHasLow = false; // 전체 샤워부스 중 부족 품목 존재 여부
@@ -748,6 +787,7 @@
         });
 
         if(document.getElementById('main-check-2').checked) completed++;
+        if(document.getElementById('main-check-3').checked) completed++;
         if(document.getElementById('main-check-4').checked) completed++;
         if(document.getElementById('main-check-9').checked) completed++;
 
@@ -795,6 +835,7 @@
         document.querySelectorAll('.single-task input[type="checkbox"]').forEach(el => state.singles[el.parentElement.dataset.id] = el.checked);
         document.querySelectorAll('.studio-sub').forEach(el => state.subs[el.dataset.id] = el.checked);
         document.querySelectorAll('.locker-sub').forEach(el => state.subs[el.dataset.id] = el.checked);
+        document.querySelectorAll('.mat-sub').forEach(el => state.subs[el.dataset.id] = el.checked);
         document.querySelectorAll('.power-check').forEach(el => state.powers[el.dataset.id] = el.checked);
         document.querySelectorAll('input[type="radio"]:checked').forEach(el => state.radios[el.name] = el.value);
 
@@ -813,7 +854,7 @@
                 // 날짜가 다르면(자정이 지났으면) 해당 드래프트 삭제 후 리턴
                 if (state.date && state.date !== today) {
                     localStorage.removeItem(`fw_closing_state_draft_${author}`);
-                    checkLockerLogic(); checkShowerLogic(); checkStudioLogic(); updateOverallProgress();
+                    checkLockerLogic(); checkMatLogic(); checkShowerLogic(); checkStudioLogic(); updateOverallProgress();
                     return;
                 }
 
@@ -827,6 +868,9 @@
                         if(state.subs[el.dataset.id]) el.checked = true; 
                     });
                     document.querySelectorAll('.locker-sub').forEach(el => { 
+                        if(state.subs[el.dataset.id]) el.checked = true; 
+                    });
+                    document.querySelectorAll('.mat-sub').forEach(el => { 
                         if(state.subs[el.dataset.id]) el.checked = true; 
                     });
                 }
@@ -847,7 +891,7 @@
                 localStorage.removeItem(`fw_closing_state_draft_${author}`);
             }
         }
-        checkLockerLogic(); checkShowerLogic(); checkStudioLogic(); updateOverallProgress();
+        checkLockerLogic(); checkMatLogic(); checkShowerLogic(); checkStudioLogic(); updateOverallProgress();
     }
 
     function loadState() {
@@ -857,7 +901,7 @@
             loadStateForAuthor(tempAuthor);
         } else {
             resetForm();
-            checkLockerLogic(); checkShowerLogic(); checkStudioLogic(); updateOverallProgress();
+            checkLockerLogic(); checkMatLogic(); checkShowerLogic(); checkStudioLogic(); updateOverallProgress();
         }
     }
 
@@ -902,6 +946,9 @@
         
         // 1-1. 2번 사물함 체크 추가
         document.querySelectorAll('.locker-sub').forEach(el => el.checked = true);
+
+        // 1-2. 3번 샤워 매트 체크 추가
+        document.querySelectorAll('.mat-sub').forEach(el => el.checked = true);
         
         // 2. 4번 샤워실 체크
         document.querySelectorAll('.power-check').forEach(el => el.checked = true);
@@ -912,6 +959,7 @@
         
         // 4. 로직 실행 및 상태 저장
         checkLockerLogic();
+        checkMatLogic();
         checkShowerLogic();
         checkStudioLogic();
         saveState();
@@ -942,6 +990,7 @@
         
         // 2. 로직 실행 및 상태 저장
         checkLockerLogic();
+        checkMatLogic();
         checkShowerLogic();
         checkStudioLogic();
         saveState();
@@ -955,6 +1004,7 @@
         el.addEventListener('change', () => { saveState(); updateOverallProgress(); });
     });
     document.querySelectorAll('.locker-sub').forEach(el => el.addEventListener('change', checkLockerLogic));
+    document.querySelectorAll('.mat-sub').forEach(el => el.addEventListener('change', checkMatLogic));
     document.querySelectorAll('.studio-sub').forEach(el => el.addEventListener('change', checkStudioLogic));
     document.getElementById('open-notes').addEventListener('input', saveState);
 
