@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- 카카오톡 등 링크 공유 시 나타나는 썸네일(OG 태그) 설정 -->
+    <meta property="og:title" content="Coupang Refresh Zone with FaWW">
+    <meta property="og:description" content="피트니스 센터 오픈/마감 근무자용 통합 헬퍼 프로그램">
+    <meta property="og:image" content="아가 파우미.png">
+
+    <title>Coupang Refresh Zone with FaWW</title>
+    <style>
+        /* 라이트 테마 변수 */
+        :root {
+            --fw-green: #2E7D32; 
+            --fw-green-light: #4CAF50;
+            --bg-color: #F5F6F8; 
+            --card-bg: #FFFFFF;  
+            --text-main: #333333;
+            --text-muted: #666666;
+            --border-color: #E2E4E7;
+            --warning-red: #E53935;
+            --warning-bg: #FFEBEE;
+            --toggle-bg: #F0F2F5;
+            --completed-bg: #F1F8E9; 
+        }
+
+        /* 모바일 터치 최적화 기본 설정 */
+        * { 
+            box-sizing: border-box; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent; 
+            touch-action: manipulation; 
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0; padding: 0; 
+            display: flex; justify-content: center;
+        }
+
+        /* 반응형 앱 컨테이너 */
+        .app-container {
+            width: 100%; max-width: 500px;
+            background-color: var(--card-bg);
+            min-height: 100vh; 
+            display: flex; flex-direction: column;
+            position: relative;
+        }
+
+        @media (min-width: 501px) {
+            body { padding: 20px; }
+            .app-container {
+                min-height: auto; border-radius: 16px;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.08); padding-bottom: 30px;
+            }
+        }
+
+        .view-section { display: none; flex-grow: 1; }
+        .view-section.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 상단 고정 헤더 */
+        .header {
+            position: sticky; top: 0; z-index: 100;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 20px; background-color: #FFFFFF;
+            border-bottom: 3px solid var(--fw-green); box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .header img { height: 32px; object-fit: contain; }
+        .header img.logo-coupang { height: 52px; } /* 쿠팡 로고 개별 크기 키움 */
+        .header h1 { margin: 0; font-size: 16px; font-weight: 800; color: var(--text-main); text-align: center; flex: 1; letter-spacing: -0.5px; }
+
+        /* ===== 홈 화면 ===== */
+        .home-container { padding: 40px 20px; text-align: center; display: flex; flex-direction: column; justify-content: center; height: 100%; }
+        .home-title { font-size: 22px; font-weight: bold; margin-bottom: 40px; color: var(--text-main); }
+        .role-btn {
+            display: block; width: 100%; padding: 30px 20px; margin-bottom: 20px;
+            background-color: #FFFFFF; border: 2px solid var(--border-color);
+            border-radius: 16px; font-size: 19px; font-weight: bold; color: var(--text-main);
+            cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+        }
+        .role-btn:active { border-color: var(--fw-green); background-color: var(--completed-bg); color: var(--fw-green); transform: scale(0.98); }
+        .role-btn span { display: block; font-size: 14px; color: var(--text-muted); margin-top: 10px; font-weight: normal; }
+
+        /* 근무자 선택 화면 */
+        .member-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .member-btn { padding: 20px; border: 1px solid var(--border-color); border-radius: 12px; background: white; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.2s;}
+        .member-btn:active { background: var(--fw-green); color: white; border-color: var(--fw-green); transform: scale(0.95);}
+
+        /* ===== 오픈 근무 화면 ===== */
+        .open-container { padding: 20px; }
+        .open-title { font-size: 18px; font-weight: bold; margin-bottom: 20px; color: var(--fw-green); display: flex; align-items: center; gap: 8px;}
+        .notes-display {
+            background-color: #FAFAFA; border: 1px solid var(--border-color); border-radius: 12px;
+            padding: 24px; min-height: 200px; font-size: 16px; line-height: 1.6; color: var(--text-main);
+            white-space: pre-wrap; margin-bottom: 30px;
+        }
+        .author-tag { font-weight: bold; color: var(--fw-green); margin-bottom: 15px; display: block; border-bottom: 1px solid #EEE; padding-bottom: 10px; }
+        .no-notes { color: var(--text-muted); font-style: italic; text-align: center; margin-top: 60px; font-size: 15px; }
+
+        /* ===== 마감 근무 화면 ===== */
+        .progress-section { padding: 20px; background-color: #FAFAFA; border-bottom: 1px solid var(--border-color); }
+        .progress-text { display: flex; justify-content: space-between; font-size: 15px; font-weight: bold; margin-bottom: 12px; color: var(--fw-green); }
+        .progress-bar-bg { width: 100%; height: 12px; background-color: var(--border-color); border-radius: 6px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background-color: var(--fw-green); width: 0%; transition: width 0.3s ease; }
+
+        .checklist-container { padding: 15px; padding-bottom: 30px; }
+
+        .check-item {
+            display: flex; align-items: flex-start; padding: 20px 16px; margin-bottom: 12px;
+            background-color: #FFFFFF; border: 1px solid var(--border-color); border-radius: 12px;
+            cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+        .check-item:active { transform: scale(0.98); background-color: #F9F9F9; }
+        .check-item.completed { border-color: var(--fw-green); background-color: var(--completed-bg); }
+        .check-item.completed label { color: var(--text-muted); }
+        .check-item.emphasize { border: 2px solid var(--fw-green); }
+        
+        input[type="checkbox"] {
+            appearance: none; width: 28px; height: 28px; border: 2px solid #CCC; border-radius: 8px;
+            margin-right: 16px; position: relative; flex-shrink: 0; background-color: #FFF; transition: all 0.2s;
+        }
+        input[type="checkbox"]:checked { background-color: var(--fw-green); border-color: var(--fw-green); }
+        input[type="checkbox"]:checked::after {
+            content: '✔'; position: absolute; color: white; font-size: 18px; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        }
+        .check-item label { flex-grow: 1; font-size: 16px; font-weight: 600; pointer-events: none; line-height: 1.4; margin-top: 3px; }
+
+        /* 아코디언 헤더 완료 스타일 */
+        .accordion-header.completed {
+            border-color: var(--fw-green);
+            background-color: var(--completed-bg);
+        }
+        .accordion-header.completed span {
+            color: var(--text-muted);
+        }
+
+        /* 메인 아코디언 애니메이션 */
+        .accordion-header {
+            display: flex; justify-content: space-between; align-items: center; padding: 20px 16px;
+            background-color: #FFFFFF; border: 1px solid var(--border-color); border-radius: 12px; font-weight: bold; cursor: pointer; margin-bottom: 5px;
+            transition: border-color 0.3s;
+        }
+        .accordion-content {
+            max-height: 0; opacity: 0; overflow: hidden; padding: 0 15px;
+            background-color: #FAFAFA; border: 1px solid transparent; border-radius: 12px;
+            margin-bottom: 0; transition: all 0.4s ease-in-out; pointer-events: none;
+        }
+        .accordion-content.active {
+            max-height: 2500px; 
+            opacity: 1; padding: 15px; margin-bottom: 15px;
+            border-color: var(--border-color); pointer-events: auto;
+        }
+        .arrow { transition: transform 0.4s ease; color: var(--text-muted); font-size: 14px; }
+        .arrow.open { transform: rotate(180deg); }
+
+        .tab-container { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab-btn {
+            flex: 1; padding: 14px; border: 1px solid var(--border-color); background-color: var(--toggle-bg);
+            border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer; text-align: center; color: var(--text-muted); transition: 0.2s;
+        }
+        .tab-btn.active { background-color: var(--fw-green); color: white; border-color: var(--fw-green); }
+
+        /* 부스별 세부 아코디언 애니메이션 */
+        .zone-list { display: none; }
+        .zone-list.active { display: block; }
+        .zone-header {
+            padding: 16px; background-color: #F0F2F5; border-radius: 8px;
+            margin-top: 10px; cursor: pointer; font-weight: bold; font-size: 15px; border: 1px solid var(--border-color);
+            transition: all 0.3s;
+        }
+        .zone-content {
+            max-height: 0; opacity: 0; overflow: hidden; padding: 0 15px;
+            background-color: #FFFFFF; border: 1px solid transparent; border-radius: 0 8px 8px 0; border-left: 4px solid var(--fw-green);
+            margin-bottom: 0; transition: all 0.4s ease-in-out; pointer-events: none;
+        }
+        .zone-content.active { 
+            max-height: 1000px; 
+            opacity: 1; padding: 20px 15px; margin-bottom: 15px;
+            border-color: var(--border-color); pointer-events: auto;
+        }
+
+        /* 3단 토글 터치 최적화 */
+        .supply-item { margin-bottom: 20px; border-bottom: 1px solid #EEEEEE; padding-bottom: 15px; }
+        .supply-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .supply-name { display: block; font-size: 15px; margin-bottom: 12px; font-weight: bold; color: var(--text-main); }
+        
+        .toggle-group { display: flex; gap: 8px; }
+        .toggle-group label {
+            flex: 1; text-align: center; padding: 14px 0; font-size: 14px; font-weight: 600;
+            border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer;
+            background-color: #FFFFFF; color: var(--text-muted); transition: 0.2s;
+        }
+        .toggle-group input[type="radio"] { display: none; }
+        .toggle-group input[value="high"]:checked + label { background-color: var(--completed-bg); border-color: var(--fw-green); color: var(--fw-green); }
+        .toggle-group input[value="mid"]:checked + label { background-color: #FFF8E1; border-color: #FFB300; color: #FF8F00; }
+        .toggle-group input[value="low"]:checked + label { background-color: var(--warning-bg); border-color: var(--warning-red); color: var(--warning-red); }
+
+        .warning-msg {
+            display: none; margin-top: 15px; font-size: 14px; font-weight: bold; color: var(--warning-red);
+            background-color: var(--warning-bg); padding: 12px; border-radius: 8px; border-left: 4px solid var(--warning-red);
+        }
+
+        .sub-check { padding: 15px; border: none; border-bottom: 1px solid #EEE; border-radius: 0; box-shadow: none; margin-bottom: 0; }
+        .sub-check:last-child { border-bottom: none; }
+
+        /* 하단 메모 및 버튼 */
+        .notes-section { padding: 20px; background-color: #FFFFFF; border-top: 1px solid var(--border-color); }
+        .notes-label { font-size: 15px; font-weight: bold; margin-bottom: 12px; display: block; color: var(--fw-green); }
+        textarea {
+            width: 100%; height: 120px; padding: 16px; border-radius: 12px;
+            background-color: #FAFAFA; color: var(--text-main); border: 1px solid var(--border-color);
+            resize: none; font-size: 16px; margin-bottom: 24px; font-family: inherit; line-height: 1.5;
+        }
+        textarea:focus { outline: none; border-color: var(--fw-green); box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.2); background-color: #FFFFFF; }
+
+        .btn-primary {
+            width: 100%; padding: 18px; font-size: 17px; font-weight: bold;
+            border-radius: 12px; border: none; cursor: pointer; transition: 0.3s;
+        }
+        .btn-submit { background-color: #E2E4E7; color: #888; pointer-events: none; margin-bottom: 10px; }
+        .btn-submit.active { background-color: var(--fw-green); color: white; pointer-events: auto; box-shadow: 0 4px 16px rgba(46, 125, 50, 0.3); }
+        .btn-submit.active:active { transform: scale(0.98); background-color: #1B5E20; }
+        
+        .btn-home { background-color: #333; color: white; }
+        .btn-home:active { transform: scale(0.98); background-color: #111; }
+        .btn-back { background-color: #FFF; color: #333; border: 1px solid #CCC; margin-top: 5px; }
+
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <!-- 고정 헤더 -->
+    <header class="header">
+        <img class="logo-coupang" src="coupang_logo.png" alt="Coupang" onerror="this.style.display='none'">
+        <h1>Coupang Refresh Zone with FaWW</h1>
+        <img src="our_logo.png" alt="FW" onerror="this.style.display='none'">
+    </header>
+
+    <!-- [1] 홈 화면 -->
+    <div id="view-home" class="view-section active">
+        <div class="home-container">
+            <div class="home-title">어떤 업무를 시작하시겠습니까?</div>
+            <button class="role-btn" onclick="switchView('view-open')">
+                ☀️ 오픈 근무
+                <span>전일 마감 특이사항 및 전달사항 확인</span>
+            </button>
+            <button class="role-btn" onclick="switchView('view-select-member')">
+                🌙 마감 근무
+                <span>구역별 마감 체크리스트 및 비품 점검</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- [2] 근무자 선택 화면 -->
+    <div id="view-select-member" class="view-section">
+        <div class="home-container">
+            <div class="home-title">근무자를 선택해주세요</div>
+            <div class="member-grid" id="member-grid"></div>
+            <button class="btn-primary btn-home" style="margin-top:30px;" onclick="switchView('view-home')">홈으로 돌아가기</button>
+        </div>
+    </div>
+
+    <!-- [3] 오픈 근무 화면 -->
+    <div id="view-open" class="view-section">
+        <div class="open-container">
+            <div class="open-title">📝 전일 마감 근무자 특이사항</div>
+            <div id="notes-content" class="notes-display"></div>
+            <button class="btn-primary btn-home" onclick="switchView('view-home')">확인 완료 (처음으로)</button>
+        </div>
+    </div>
+
+    <!-- [4] 마감 근무 화면 -->
+    <div id="view-close" class="view-section">
+        <div class="progress-section">
+            <div class="progress-text">
+                <span>진행률 (현재 근무자: <span id="current-member" style="color:var(--text-main);"></span>)</span>
+                <span id="progress-count">완료: 0개 / 총 11개</span>
+            </div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-bar"></div></div>
+        </div>
+
+        <div class="checklist-container">
+            <label class="check-item single-task" data-id="task-1"><input type="checkbox"> <span>1. 탈의실 세탁물 수거 및 화물 엘리베이터 앞에 옮겨두기</span></label>
+            <label class="check-item single-task" data-id="task-2"><input type="checkbox"> <span>2. 남자 탈의실, 여자 탈의실 사물함 확인 (분실물 확인)</span></label>
+            <label class="check-item single-task" data-id="task-3"><input type="checkbox"> <span>3. 남자 탈의실, 여자 탈의실 샤워 매트 걷어두기</span></label>
+
+            <!-- 4번: 샤워실 (아코디언) -->
+            <div class="accordion-header" onclick="toggleAccordion('shower-acc', 'arrow-4')">
+                <div style="display: flex; align-items: flex-start; flex: 1;">
+                    <input type="checkbox" id="main-check-4" style="pointer-events: none;">
+                    <span style="font-size: 16px; margin-top: 3px;">4. 남/녀 샤워실 점검 (세부 비품 및 전원)</span>
+                </div>
+                <span class="arrow" id="arrow-4">▼</span>
+            </div>
+            <div id="shower-acc" class="accordion-content">
+                <div class="tab-container">
+                    <div class="tab-btn active" onclick="switchTab(this, 'female')">여자 샤워실</div>
+                    <div class="tab-btn" onclick="switchTab(this, 'male')">남자 샤워실</div>
+                </div>
+                <div id="female-zone" class="zone-list active"></div>
+                <div id="male-zone" class="zone-list"></div>
+            </div>
+
+            <label class="check-item single-task" data-id="task-5"><input type="checkbox"> <span>5. 남자/여자 탈의실 공기청정기 전원 끄기</span></label>
+            <label class="check-item single-task" data-id="task-6"><input type="checkbox"> <span>6. 러닝머신 0도 설정 확인 및 운동기구 전원 끄기</span></label>
+            <label class="check-item single-task" data-id="task-7"><input type="checkbox"> <span>7. 필라테스 머신 정리</span></label>
+            <label class="check-item single-task" data-id="task-8"><input type="checkbox"> <span>8. 메인 공기청정기 전원 끄기</span></label>
+
+            <!-- 9번: 웰빙 스튜디오 (아코디언) -->
+            <div class="accordion-header" onclick="toggleAccordion('studio-acc', 'arrow-9')">
+                <div style="display: flex; align-items: flex-start; flex: 1;">
+                    <input type="checkbox" id="main-check-9" style="pointer-events: none;">
+                    <span style="font-size: 16px; margin-top: 3px;">9. 웰빙 스튜디오 정리</span>
+                </div>
+                <span class="arrow" id="arrow-9">▼</span>
+            </div>
+            <div id="studio-acc" class="accordion-content">
+                <label class="check-item sub-check"><input type="checkbox" class="studio-sub" data-id="sub-9-1"> <span>공기 청정기 끄기</span></label>
+                <label class="check-item sub-check"><input type="checkbox" class="studio-sub" data-id="sub-9-2"> <span>요가 매트 정리</span></label>
+                <label class="check-item sub-check"><input type="checkbox" class="studio-sub" data-id="sub-9-3"> <span>콘센트 전원 끄기</span></label>
+                <label class="check-item sub-check"><input type="checkbox" class="studio-sub" data-id="sub-9-4"> <span>소등</span></label>
+            </div>
+
+            <label class="check-item single-task" data-id="task-10"><input type="checkbox"> <span>10. 운동기구 클렌징 티슈 사용하여 닦기</span></label>
+            <label class="check-item single-task" data-id="task-11"><input type="checkbox"> <span>11. 최종 시설 확인 및 전체 소등 (입구 자동문 켜두기)</span></label>
+        </div>
+
+        <div class="notes-section">
+            <label class="notes-label">📝 다음 날 오픈 직원을 위한 특이사항</label>
+            <textarea id="open-notes" placeholder="오픈 근무자에게 전달할 내용이나 부족한 비품 등 특이사항을 적어주세요."></textarea>
+            <button class="btn-primary btn-submit" id="submit-btn" onclick="submitClosing()">최종 마감 완료</button>
+            <button class="btn-primary btn-back" onclick="switchView('view-home')">홈으로 가기</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ===== 1. 전역 변수 및 초기화 =====
+    const members = ["이지희", "이동현", "류재진", "나강현", "김동휘", "문채이"];
+    const showerConfig = { female: [1, 2, 3, 4], male: [1, 2, 3, 4, 5] };
+    const supplyList = ['샴푸', '린스', '바디워시'];
+
+    // 근무자 버튼 동적 생성
+    const grid = document.getElementById('member-grid');
+    members.forEach(name => {
+        const btn = document.createElement('button');
+        btn.className = 'member-btn';
+        btn.textContent = name;
+        btn.onclick = () => {
+            document.getElementById('current-member').textContent = name;
+            localStorage.setItem('temp_author', name);
+            switchView('view-close');
+        };
+        grid.appendChild(btn);
+    });
+
+    // ===== 2. 샤워실 HTML 동적 생성 =====
+    function generateShowerZones(gender) {
+        let html = '';
+        showerConfig[gender].forEach(num => {
+            html += `<div class="zone-header" onclick="toggleZone(this)">▶ ${gender === 'female' ? '여자' : '남자'} 샤워부스 ${num}</div>`;
+            html += `<div class="zone-content shower-booth-data">`;
+            
+            const powerId = `power_${gender}_${num}`;
+            html += `
+                <label class="check-item sub-check" style="background-color:#F5F6F8; border:1px solid #E2E4E7; border-radius:8px; margin-bottom:20px;">
+                    <input type="checkbox" class="power-check" data-id="${powerId}" onchange="saveState(); checkShowerLogic();"> 
+                    <span>샤워기 전원 꺼짐 확인</span>
+                </label>
+            `;
+
+            supplyList.forEach((item, i) => {
+                const groupName = `supply_${gender}_${num}_${i}`;
+                const uniqueIdHigh = `${groupName}_high`;
+                const uniqueIdMid = `${groupName}_mid`;
+                const uniqueIdLow = `${groupName}_low`;
+
+                html += `
+                    <div class="supply-item">
+                        <span class="supply-name">${item}</span>
+                        <div class="toggle-group">
+                            <input type="radio" id="${uniqueIdHigh}" name="${groupName}" value="high" onchange="saveState(); checkShowerLogic();">
+                            <label for="${uniqueIdHigh}">충분</label>
+                            
+                            <input type="radio" id="${uniqueIdMid}" name="${groupName}" value="mid" onchange="saveState(); checkShowerLogic();">
+                            <label for="${uniqueIdMid}">보통</label>
+                            
+                            <input type="radio" id="${uniqueIdLow}" name="${groupName}" value="low" onchange="saveState(); checkShowerLogic();">
+                            <label for="${uniqueIdLow}">부족</label>
+                        </div>
+                    </div>
+                `;
+            });
+            html += `<div class="warning-msg">💧 부족한 물품은 꼭 리필해주세요!</div></div>`;
+        });
+        document.getElementById(`${gender}-zone`).innerHTML = html;
+    }
+    generateShowerZones('female');
+    generateShowerZones('male');
+
+    // ===== 3. 화면 전환 및 메모 로드 =====
+    function switchView(viewId) {
+        document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
+        document.getElementById(viewId).classList.add('active');
+
+        if (viewId === 'view-open') loadNotesForOpen();
+        if (viewId === 'view-close') window.scrollTo(0, 0);
+    }
+
+    function loadNotesForOpen() {
+        const saved = localStorage.getItem('fw_closing_state');
+        const displayArea = document.getElementById('notes-content');
+        
+        if (saved) {
+            try {
+                const state = JSON.parse(saved);
+                if (state.notes && state.notes.trim() !== '') {
+                    // 작성자 태그 추가
+                    displayArea.innerHTML = `<span class="author-tag">작성자: ${state.author || '알 수 없음'}</span>${state.notes.replace(/\n/g, '<br>')}`;
+                    displayArea.classList.remove('no-notes');
+                } else {
+                    displayArea.innerHTML = '<div class="no-notes">전달된 특이사항이 없습니다.</div>';
+                }
+            } catch (e) {
+                console.error("Error parsing open notes state", e);
+                displayArea.innerHTML = '<div class="no-notes">저장된 마감 데이터가 손상되었습니다.</div>';
+            }
+        } else {
+            displayArea.innerHTML = '<div class="no-notes">저장된 마감 데이터가 없습니다.</div>';
+        }
+    }
+
+    // ===== 4. 아코디언 동작 제어 =====
+    function toggleAccordion(contentId, arrowId) {
+        const content = document.getElementById(contentId);
+        const arrow = document.getElementById(arrowId);
+        content.classList.toggle('active');
+        arrow.classList.toggle('open');
+    }
+
+    function switchTab(el, gender) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        el.classList.add('active');
+        document.querySelectorAll('.zone-list').forEach(list => list.classList.remove('active'));
+        document.getElementById(`${gender}-zone`).classList.add('active');
+    }
+
+    // event 인자 대응 (Firefox 등 전역 event가 정의되지 않은 환경 예방을 위해 switchTab 선언 개선 완료)
+
+    function toggleZone(el) {
+        const content = el.nextElementSibling;
+        content.classList.toggle('active');
+        el.textContent = content.classList.contains('active') ? el.textContent.replace('▶', '▼') : el.textContent.replace('▼', '▶');
+    }
+
+    // ===== 5. 체크리스트 검증 및 자동 닫힘 스크롤 로직 =====
+    function checkShowerLogic() {
+        let allValid = true;
+        let anyBoothHasLow = false; // 전체 샤워부스 중 부족 품목 존재 여부
+        document.querySelectorAll('.shower-booth-data').forEach(booth => {
+            let hasLow = false; let boothValid = true;
+            if (!booth.querySelector('.power-check').checked) { boothValid = false; allValid = false; }
+            
+            const groups = new Set([...booth.querySelectorAll('input[type="radio"]')].map(r => r.name));
+            groups.forEach(name => {
+                const checked = booth.querySelector(`input[name="${name}"]:checked`);
+                if (!checked) { boothValid = false; allValid = false; }
+                else if (checked.value === 'low') { hasLow = true; anyBoothHasLow = true; boothValid = false; allValid = false; }
+            });
+
+            booth.querySelector('.warning-msg').style.display = hasLow ? 'block' : 'none';
+
+            // 개별 샤워부스 자동 닫힘 & 스크롤
+            const header = booth.previousElementSibling;
+            if (boothValid) {
+                header.style.borderColor = "var(--fw-green)";
+                header.style.color = "var(--fw-green)";
+                // 부족(low) 상태가 아닐 때만 자동 닫힘 수행
+                if (!hasLow && booth.classList.contains('active')) {
+                    setTimeout(() => {
+                        // 500ms 대기 후 실행 시점에 해당 부스가 여전히 부족 항목이 없는지 재검증
+                        let currentValid = booth.querySelector('.power-check').checked;
+                        let currentHasLow = false;
+                        const currentGroups = new Set([...booth.querySelectorAll('input[type="radio"]')].map(r => r.name));
+                        currentGroups.forEach(name => {
+                            const checked = booth.querySelector(`input[name="${name}"]:checked`);
+                            if (!checked) currentValid = false;
+                            else if (checked.value === 'low') currentHasLow = true;
+                        });
+                        if (currentValid && !currentHasLow && booth.classList.contains('active')) {
+                            booth.classList.remove('active');
+                            header.textContent = header.textContent.replace('▼', '▶');
+                            header.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }, 500); 
+                }
+            } else {
+                header.style.borderColor = "var(--border-color)";
+                header.style.color = "var(--text-main)";
+            }
+        });
+
+        const main4 = document.getElementById('main-check-4');
+        main4.checked = allValid;
+        
+        // 메인 샤워실 탭 자동 닫힘 로직
+        if(allValid) {
+            main4.closest('.accordion-header').classList.add('completed');
+            const content = document.getElementById('shower-acc');
+            // 어떤 부스도 부족(low)인 상태가 아닐 때만 메인 아코디언을 자동으로 닫음
+            if (!anyBoothHasLow && content.classList.contains('active')) {
+                setTimeout(() => {
+                    // 600ms 대기 후 실행 시점에 전체 검증 재수행
+                    let checkAgainValid = document.getElementById('main-check-4').checked;
+                    let checkAgainLow = false;
+                    document.querySelectorAll('.shower-booth-data').forEach(b => {
+                        b.querySelectorAll('input[type="radio"]:checked').forEach(r => {
+                            if (r.value === 'low') checkAgainLow = true;
+                        });
+                    });
+                    if (checkAgainValid && !checkAgainLow && content.classList.contains('active')) {
+                        content.classList.remove('active');
+                        document.getElementById('arrow-4').classList.remove('open');
+                    }
+                }, 600);
+            }
+        } else {
+            main4.closest('.accordion-header').classList.remove('completed');
+        }
+        updateOverallProgress();
+    }
+
+    function checkStudioLogic() {
+        const subs = document.querySelectorAll('.studio-sub');
+        let allChecked = true;
+        subs.forEach(s => { 
+            if(!s.checked) allChecked = false;
+            if(s.checked) s.closest('.check-item').classList.add('completed');
+            else s.closest('.check-item').classList.remove('completed');
+        });
+
+        const main9 = document.getElementById('main-check-9');
+        main9.checked = allChecked;
+        
+        // 웰빙 스튜디오 메인 탭 자동 닫힘 로직
+        if(allChecked) {
+            main9.closest('.accordion-header').classList.add('completed');
+            const content = document.getElementById('studio-acc');
+            if (content.classList.contains('active')) {
+                setTimeout(() => {
+                    content.classList.remove('active');
+                    document.getElementById('arrow-9').classList.remove('open');
+                }, 600);
+            }
+        } else {
+            main9.closest('.accordion-header').classList.remove('completed');
+        }
+        saveState(); updateOverallProgress();
+    }
+
+    function updateOverallProgress() {
+        let completed = 0;
+        document.querySelectorAll('.single-task input[type="checkbox"]').forEach(check => {
+            if(check.checked) { completed++; check.closest('.check-item').classList.add('completed'); } 
+            else { check.closest('.check-item').classList.remove('completed'); }
+        });
+
+        if(document.getElementById('main-check-4').checked) completed++;
+        if(document.getElementById('main-check-9').checked) completed++;
+
+        const total = 11;
+        document.getElementById('progress-count').textContent = `완료: ${completed}개 / 총 ${total}개`;
+        document.getElementById('progress-bar').style.width = `${(completed / total) * 100}%`;
+
+        const btn = document.getElementById('submit-btn');
+        if (completed === total) {
+            btn.classList.add('active'); 
+            btn.textContent = '✅ 최종 마감 완료';
+        } else {
+            btn.classList.remove('active'); 
+            btn.textContent = '진행 중...';
+        }
+    }
+
+    // ===== 6. 데이터 저장 및 불러오기 (자정 리셋) =====
+    function saveState() {
+        const state = { 
+            singles: {}, subs: {}, powers: {}, radios: {}, 
+            notes: document.getElementById('open-notes').value,
+            author: localStorage.getItem('temp_author') || "",
+            date: new Date().toDateString() 
+        };
+        
+        document.querySelectorAll('.single-task input[type="checkbox"]').forEach(el => state.singles[el.parentElement.dataset.id] = el.checked);
+        document.querySelectorAll('.studio-sub').forEach(el => state.subs[el.dataset.id] = el.checked);
+        document.querySelectorAll('.power-check').forEach(el => state.powers[el.dataset.id] = el.checked);
+        document.querySelectorAll('input[type="radio"]:checked').forEach(el => state.radios[el.name] = el.value);
+
+        localStorage.setItem('fw_closing_state', JSON.stringify(state));
+    }
+
+    function loadState() {
+        const saved = localStorage.getItem('fw_closing_state');
+        if (saved) {
+            try {
+                let state = JSON.parse(saved);
+                const today = new Date().toDateString();
+
+                // 날짜가 다르면(자정이 지났으면) 메모와 작성자만 남기고 초기화
+                if (state.date && state.date !== today) {
+                    state = { singles: {}, subs: {}, powers: {}, radios: {}, notes: state.notes, author: state.author, date: today };
+                    localStorage.setItem('fw_closing_state', JSON.stringify(state));
+                }
+
+                if (state.singles) {
+                    document.querySelectorAll('.single-task input[type="checkbox"]').forEach(el => { if(state.singles[el.parentElement.dataset.id]) el.checked = true; });
+                }
+                if (state.subs) {
+                    document.querySelectorAll('.studio-sub').forEach(el => { if(state.subs[el.dataset.id]) el.checked = true; });
+                }
+                if (state.powers) {
+                    document.querySelectorAll('.power-check').forEach(el => { if(state.powers[el.dataset.id]) el.checked = true; });
+                }
+                if (state.radios) {
+                    for (const [name, val] of Object.entries(state.radios || {})) {
+                        const radio = document.querySelector(`input[name="${name}"][value="${val}"]`);
+                        if(radio) radio.checked = true;
+                    }
+                }
+                if (state.notes) document.getElementById('open-notes').value = state.notes;
+            } catch (e) {
+                console.error("Error parsing closing state", e);
+                localStorage.removeItem('fw_closing_state');
+            }
+            
+            // 현재 작업 중이던 작성자 이름 복구
+            const tempAuthor = localStorage.getItem('temp_author');
+            if(tempAuthor) {
+                document.getElementById('current-member').textContent = tempAuthor;
+            }
+        }
+        checkShowerLogic(); checkStudioLogic(); updateOverallProgress();
+    }
+
+    function submitClosing() {
+        const finalNotes = document.getElementById('open-notes').value;
+        const currentAuthor = localStorage.getItem('temp_author') || "알 수 없음";
+        
+        localStorage.removeItem('fw_closing_state');
+        // 제출 시, 기존 체크 항목을 날리고 다음 오픈자를 위한 메모 데이터만 저장
+        localStorage.setItem('fw_closing_state', JSON.stringify({ 
+            notes: finalNotes,
+            author: currentAuthor,
+            date: new Date().toDateString()
+        }));
+        
+        alert("성공적으로 마감 데이터가 저장되었습니다!\n수고하셨습니다.");
+        location.reload(); 
+    }
+
+    // ===== 7. 이벤트 리스너 바인딩 =====
+    document.querySelectorAll('.single-task input[type="checkbox"]').forEach(el => {
+        el.addEventListener('change', () => { saveState(); updateOverallProgress(); });
+    });
+    document.querySelectorAll('.studio-sub').forEach(el => el.addEventListener('change', checkStudioLogic));
+    document.getElementById('open-notes').addEventListener('input', saveState);
+
+    // 시작 시 데이터 로드
+    window.onload = loadState;
+
+</script>
+
+</body>
+</html>
