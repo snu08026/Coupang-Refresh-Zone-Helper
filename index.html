@@ -407,6 +407,7 @@
         btn.onclick = () => {
             document.getElementById('current-member').textContent = name;
             localStorage.setItem('temp_author', name);
+            loadStateForAuthor(name);
             switchView('view-close');
         };
         grid.appendChild(btn);
@@ -657,12 +658,30 @@
         }
     }
 
-    // ===== 6. 데이터 저장 및 불러오기 (자정 리셋) =====
+    // ===== 6. 데이터 저장 및 불러오기 (근무자별 독립 드래프트) =====
+    
+    // 폼 상태 전체 초기화
+    function resetForm() {
+        document.querySelectorAll('input[type="checkbox"]').forEach(el => el.checked = false);
+        document.querySelectorAll('input[type="radio"]').forEach(el => el.checked = false);
+        document.getElementById('open-notes').value = '';
+        
+        document.querySelectorAll('.check-item').forEach(el => el.classList.remove('completed'));
+        document.querySelectorAll('.accordion-header').forEach(el => el.classList.remove('completed'));
+        document.querySelectorAll('.zone-header').forEach(el => {
+            el.style.borderColor = "var(--border-color)";
+        });
+        document.querySelectorAll('.warning-msg').forEach(el => el.style.display = 'none');
+    }
+
     function saveState() {
+        const author = localStorage.getItem('temp_author');
+        if (!author) return;
+        
         const state = { 
             singles: {}, subs: {}, powers: {}, radios: {}, 
             notes: document.getElementById('open-notes').value,
-            author: localStorage.getItem('temp_author') || "",
+            author: author,
             date: new Date().toDateString() 
         };
         
@@ -671,30 +690,39 @@
         document.querySelectorAll('.power-check').forEach(el => state.powers[el.dataset.id] = el.checked);
         document.querySelectorAll('input[type="radio"]:checked').forEach(el => state.radios[el.name] = el.value);
 
-        localStorage.setItem('fw_closing_state', JSON.stringify(state));
+        localStorage.setItem(`fw_closing_state_draft_${author}`, JSON.stringify(state));
     }
 
-    function loadState() {
-        const saved = localStorage.getItem('fw_closing_state');
+    function loadStateForAuthor(author) {
+        resetForm();
+        
+        const saved = localStorage.getItem(`fw_closing_state_draft_${author}`);
         if (saved) {
             try {
                 let state = JSON.parse(saved);
                 const today = new Date().toDateString();
 
-                // 날짜가 다르면(자정이 지났으면) 메모와 작성자만 남기고 초기화
+                // 날짜가 다르면(자정이 지났으면) 해당 드래프트 삭제 후 리턴
                 if (state.date && state.date !== today) {
-                    state = { singles: {}, subs: {}, powers: {}, radios: {}, notes: state.notes, author: state.author, date: today };
-                    localStorage.setItem('fw_closing_state', JSON.stringify(state));
+                    localStorage.removeItem(`fw_closing_state_draft_${author}`);
+                    checkShowerLogic(); checkStudioLogic(); updateOverallProgress();
+                    return;
                 }
 
                 if (state.singles) {
-                    document.querySelectorAll('.single-task input[type="checkbox"]').forEach(el => { if(state.singles[el.parentElement.dataset.id]) el.checked = true; });
+                    document.querySelectorAll('.single-task input[type="checkbox"]').forEach(el => { 
+                        if(state.singles[el.parentElement.dataset.id]) el.checked = true; 
+                    });
                 }
                 if (state.subs) {
-                    document.querySelectorAll('.studio-sub').forEach(el => { if(state.subs[el.dataset.id]) el.checked = true; });
+                    document.querySelectorAll('.studio-sub').forEach(el => { 
+                        if(state.subs[el.dataset.id]) el.checked = true; 
+                    });
                 }
                 if (state.powers) {
-                    document.querySelectorAll('.power-check').forEach(el => { if(state.powers[el.dataset.id]) el.checked = true; });
+                    document.querySelectorAll('.power-check').forEach(el => { 
+                        if(state.powers[el.dataset.id]) el.checked = true; 
+                    });
                 }
                 if (state.radios) {
                     for (const [name, val] of Object.entries(state.radios || {})) {
@@ -704,30 +732,37 @@
                 }
                 if (state.notes) document.getElementById('open-notes').value = state.notes;
             } catch (e) {
-                console.error("Error parsing closing state", e);
-                localStorage.removeItem('fw_closing_state');
-            }
-            
-            // 현재 작업 중이던 작성자 이름 복구
-            const tempAuthor = localStorage.getItem('temp_author');
-            if(tempAuthor) {
-                document.getElementById('current-member').textContent = tempAuthor;
+                console.error("Error parsing closing state draft", e);
+                localStorage.removeItem(`fw_closing_state_draft_${author}`);
             }
         }
         checkShowerLogic(); checkStudioLogic(); updateOverallProgress();
+    }
+
+    function loadState() {
+        const tempAuthor = localStorage.getItem('temp_author');
+        if (tempAuthor) {
+            document.getElementById('current-member').textContent = tempAuthor;
+            loadStateForAuthor(tempAuthor);
+        } else {
+            resetForm();
+            checkShowerLogic(); checkStudioLogic(); updateOverallProgress();
+        }
     }
 
     function submitClosing() {
         const finalNotes = document.getElementById('open-notes').value;
         const currentAuthor = localStorage.getItem('temp_author') || "알 수 없음";
         
-        localStorage.removeItem('fw_closing_state');
-        // 제출 시, 기존 체크 항목을 날리고 다음 오픈자를 위한 메모 데이터만 저장
+        // 1. 오픈 근무자 전달용 공유 데이터 생성
         localStorage.setItem('fw_closing_state', JSON.stringify({ 
             notes: finalNotes,
             author: currentAuthor,
             date: new Date().toDateString()
         }));
+        
+        // 2. 제출한 마감자의 드래프트 데이터 정리
+        localStorage.removeItem(`fw_closing_state_draft_${currentAuthor}`);
         
         alert("성공적으로 마감 데이터가 저장되었습니다!\n수고하셨습니다.");
         location.reload(); 
