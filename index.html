@@ -349,7 +349,18 @@
 
         <div class="checklist-container">
             <label class="check-item single-task" data-id="task-1"><input type="checkbox"> <span>1. 탈의실 세탁물 수거 및 화물 엘리베이터 앞에 옮겨두기</span></label>
-            <label class="check-item single-task" data-id="task-2"><input type="checkbox"> <span>2. 남자 탈의실, 여자 탈의실 사물함 확인 (분실물 확인)</span></label>
+            <!-- 2번: 사물함 확인 (아코디언) -->
+            <div class="accordion-header" onclick="toggleAccordion('locker-acc', 'arrow-2')">
+                <div style="display: flex; align-items: flex-start; flex: 1;">
+                    <input type="checkbox" id="main-check-2" style="pointer-events: none;">
+                    <span style="font-size: 16px; margin-top: 3px;">2. 남자 탈의실, 여자 탈의실 사물함 확인 (분실물 확인)</span>
+                </div>
+                <span class="arrow" id="arrow-2">▼</span>
+            </div>
+            <div id="locker-acc" class="accordion-content">
+                <label class="check-item sub-check"><input type="checkbox" class="locker-sub" data-id="sub-2-1"> <span>남자 탈의실 확인 완료</span></label>
+                <label class="check-item sub-check"><input type="checkbox" class="locker-sub" data-id="sub-2-2"> <span>여자 탈의실 확인 완료</span></label>
+            </div>
             <label class="check-item single-task" data-id="task-3"><input type="checkbox"> <span>3. 남자 탈의실, 여자 탈의실 샤워 매트 걷어두기</span></label>
 
             <!-- 4번: 샤워실 (아코디언) -->
@@ -589,6 +600,34 @@
     }
 
     // ===== 5. 체크리스트 검증 및 자동 닫힘 스크롤 로직 =====
+    // 2번 사물함 확인 메인 탭 자동 검증 및 닫힘 로직
+    function checkLockerLogic() {
+        const subs = document.querySelectorAll('.locker-sub');
+        let allChecked = true;
+        subs.forEach(s => { 
+            if(!s.checked) allChecked = false;
+            if(s.checked) s.closest('.check-item').classList.add('completed');
+            else s.closest('.check-item').classList.remove('completed');
+        });
+
+        const main2 = document.getElementById('main-check-2');
+        main2.checked = allChecked;
+        
+        if(allChecked) {
+            main2.closest('.accordion-header').classList.add('completed');
+            const content = document.getElementById('locker-acc');
+            if (content.classList.contains('active')) {
+                setTimeout(() => {
+                    content.classList.remove('active');
+                    document.getElementById('arrow-2').classList.remove('open');
+                }, 600);
+            }
+        } else {
+            main2.closest('.accordion-header').classList.remove('completed');
+        }
+        saveState(); updateOverallProgress();
+    }
+
     function checkShowerLogic() {
         let allValid = true;
         let anyBoothHasLow = false; // 전체 샤워부스 중 부족 품목 존재 여부
@@ -700,6 +739,7 @@
             else { check.closest('.check-item').classList.remove('completed'); }
         });
 
+        if(document.getElementById('main-check-2').checked) completed++;
         if(document.getElementById('main-check-4').checked) completed++;
         if(document.getElementById('main-check-9').checked) completed++;
 
@@ -746,6 +786,7 @@
         
         document.querySelectorAll('.single-task input[type="checkbox"]').forEach(el => state.singles[el.parentElement.dataset.id] = el.checked);
         document.querySelectorAll('.studio-sub').forEach(el => state.subs[el.dataset.id] = el.checked);
+        document.querySelectorAll('.locker-sub').forEach(el => state.subs[el.dataset.id] = el.checked);
         document.querySelectorAll('.power-check').forEach(el => state.powers[el.dataset.id] = el.checked);
         document.querySelectorAll('input[type="radio"]:checked').forEach(el => state.radios[el.name] = el.value);
 
@@ -764,7 +805,7 @@
                 // 날짜가 다르면(자정이 지났으면) 해당 드래프트 삭제 후 리턴
                 if (state.date && state.date !== today) {
                     localStorage.removeItem(`fw_closing_state_draft_${author}`);
-                    checkShowerLogic(); checkStudioLogic(); updateOverallProgress();
+                    checkLockerLogic(); checkShowerLogic(); checkStudioLogic(); updateOverallProgress();
                     return;
                 }
 
@@ -775,6 +816,9 @@
                 }
                 if (state.subs) {
                     document.querySelectorAll('.studio-sub').forEach(el => { 
+                        if(state.subs[el.dataset.id]) el.checked = true; 
+                    });
+                    document.querySelectorAll('.locker-sub').forEach(el => { 
                         if(state.subs[el.dataset.id]) el.checked = true; 
                     });
                 }
@@ -795,7 +839,7 @@
                 localStorage.removeItem(`fw_closing_state_draft_${author}`);
             }
         }
-        checkShowerLogic(); checkStudioLogic(); updateOverallProgress();
+        checkLockerLogic(); checkShowerLogic(); checkStudioLogic(); updateOverallProgress();
     }
 
     function loadState() {
@@ -805,7 +849,7 @@
             loadStateForAuthor(tempAuthor);
         } else {
             resetForm();
-            checkShowerLogic(); checkStudioLogic(); updateOverallProgress();
+            checkLockerLogic(); checkShowerLogic(); checkStudioLogic(); updateOverallProgress();
         }
     }
 
@@ -848,6 +892,9 @@
         // 1. 모든 일반 단일 테스크 체크
         document.querySelectorAll('.single-task input[type="checkbox"]').forEach(el => el.checked = true);
         
+        // 1-1. 2번 사물함 체크 추가
+        document.querySelectorAll('.locker-sub').forEach(el => el.checked = true);
+        
         // 2. 4번 샤워실 체크
         document.querySelectorAll('.power-check').forEach(el => el.checked = true);
         document.querySelectorAll('input[type="radio"][value="high"]').forEach(el => el.checked = true);
@@ -856,6 +903,7 @@
         document.querySelectorAll('.studio-sub').forEach(el => el.checked = true);
         
         // 4. 로직 실행 및 상태 저장
+        checkLockerLogic();
         checkShowerLogic();
         checkStudioLogic();
         saveState();
@@ -885,6 +933,7 @@
         resetForm();
         
         // 2. 로직 실행 및 상태 저장
+        checkLockerLogic();
         checkShowerLogic();
         checkStudioLogic();
         saveState();
@@ -897,6 +946,7 @@
     document.querySelectorAll('.single-task input[type="checkbox"]').forEach(el => {
         el.addEventListener('change', () => { saveState(); updateOverallProgress(); });
     });
+    document.querySelectorAll('.locker-sub').forEach(el => el.addEventListener('change', checkLockerLogic));
     document.querySelectorAll('.studio-sub').forEach(el => el.addEventListener('change', checkStudioLogic));
     document.getElementById('open-notes').addEventListener('input', saveState);
 
