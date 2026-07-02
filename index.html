@@ -308,17 +308,18 @@
             transition: transform 0.2s;
         }
         .lounge-card:active { transform: scale(0.99); }
-        .lounge-card-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 8px; font-weight: 600; border-bottom: 1px dashed #EEE; padding-bottom: 6px; }
-        .lounge-card-content { font-size: 15px; color: var(--text-main); line-height: 1.5; white-space: pre-wrap; word-break: break-all; margin-right: 25px; }
+        .lounge-card-content { font-size: 15px; color: var(--text-main); line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
         
         .lounge-card-delete {
-            position: absolute; top: 12px; right: 12px; background: none; border: none;
-            color: var(--warning-red); font-size: 16px; cursor: pointer; padding: 4px;
+            background: none; border: none; color: var(--warning-red); font-size: 13px;
+            cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: background 0.2s;
+            vertical-align: middle; margin-left: 6px; display: inline-flex; align-items: center;
         }
+        .lounge-card-delete:hover { background-color: #FFEBEE; }
         
         .lounge-write-box { margin-top: auto; padding-top: 15px; border-top: 1px solid var(--border-color); }
         
-        .lounge-modal-backdrop {
+        .lounge-card-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 8px; font-weight: 600; border-bottom: 1px dashed #EEE; padding-bottom: 6px; align-items: center; }
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center;
             z-index: 1000; padding: 20px;
@@ -539,6 +540,10 @@
             <div style="margin-bottom: 20px; text-align: left;">
                 <label class="modal-label">내용</label>
                 <textarea id="lounge-input-content" placeholder="공유할 내용을 입력하세요" class="modal-textarea" style="height: 150px; margin-bottom: 0;"></textarea>
+            </div>
+            <div style="margin-bottom: 20px; text-align: left; display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="lounge-input-pinned" style="width: 18px; height: 18px; cursor: pointer;">
+                <label for="lounge-input-pinned" style="font-size: 14px; font-weight: bold; color: var(--text-main); cursor: pointer;">📌 이 글을 게시판 상단에 고정</label>
             </div>
             <div class="modal-buttons">
                 <button class="btn-primary" style="background-color: #FAFAFA; border: 1px solid var(--border-color); color: var(--text-main); margin-bottom: 0; flex: 1; padding: 12px;" onclick="closeLoungeWriteForm()">취소</button>
@@ -1262,18 +1267,18 @@
     let currentLoungeTab = 'notice';
     
     const defaultNotices = [
-        { id: 'n1', title: '쿠팡 리프레시 존 헬퍼 PWA 앱 출시 안내', author: '센터 운영팀', content: '스마트폰 홈 화면에 추가하여 앱 형태로 편리하게 점검해보세요. 버그나 오류 사항은 단톡방에 알려주시기 바랍니다.', date: '2026. 7. 2.' },
-        { id: 'n2', title: '샤워실 비품 정렬 및 마감 수거 규칙 준수 요청', author: '운영 총괄', content: '최근 마감 시 세탁물 수거함 비우기가 누락되는 건이 발생하고 있습니다. 체크리스트 1번 항목을 꼼꼼하게 점검하고 화물 엘리베이터 앞으로 옮겨주세요.', date: '2026. 7. 1.' }
+        { id: 'n1', title: '쿠팡 리프레시 존 헬퍼 PWA 앱 출시 안내', author: '센터 운영팀', content: '스마트폰 홈 화면에 추가하여 앱 형태로 편리하게 점검해보세요. 버그나 오류 사항은 단톡방에 알려주시기 바랍니다.', date: '2026. 7. 2.', pinned: true },
+        { id: 'n2', title: '샤워실 비품 정렬 및 마감 수거 규칙 준수 요청', author: '운영 총괄', content: '최근 마감 시 세탁물 수거함 비우기가 누락되는 건이 발생하고 있습니다. 체크리스트 1번 항목을 꼼꼼하게 점검하고 화물 엘리베이터 앞으로 옮겨주세요.', date: '2026. 7. 1.', pinned: false }
     ];
     
     const defaultLosts = [
-        { id: 'l1', title: '남자 탈의실 안경집 분실물', author: '김동휘', content: '남자 탈의실 3번 락커 안 검은색 아디다스 안경집 발견하여 인포데스크 서랍에 보관해 두었습니다.', date: '2026. 7. 1.' },
-        { id: 'l2', title: '여자 샤워실 갤럭시 버즈 분실물', author: '문채이', content: '여자 샤워실 2번 부스 앞 흰색 갤럭시 버즈 프로 한 쪽 발견했습니다. 인포데스크 분실물 바구니 확인해주세요.', date: '2026. 6. 30.' }
+        { id: 'l1', title: '남자 탈의실 안경집 분실물', author: '김동휘', content: '남자 탈의실 3번 락커 안 검은색 아디다스 안경집 발견하여 인포데스크 서랍에 보관해 두었습니다.', date: '2026. 7. 1.', pinned: false },
+        { id: 'l2', title: '여자 샤워실 갤럭시 버즈 분실물', author: '문채이', content: '여자 샤워실 2번 부스 앞 흰색 갤럭시 버즈 프로 한 쪽 발견했습니다. 인포데스크 분실물 바구니 확인해주세요.', date: '2026. 6. 30.', pinned: false }
     ];
     
     const defaultShares = [
-        { id: 's1', title: '오픈 조 꿀팁 (수건 수거 시간)', author: '이지희', content: '오전 수건 세탁물 카트 수거는 9시 30분 이전에 해두시는 게 헬스장 혼잡 시간대와 겹치지 않아 훨씬 수월합니다.', date: '2026. 7. 2.' },
-        { id: 's2', title: '마감 청소 팁 (스퀴지 사용)', author: '이동현', content: '마감 시 샤워부스 청소하고 바닥 밀대(스퀴지)로 물기를 싹 쓸어내 주셔야 다음 날 아침 냄새 예방에 좋습니다.', date: '2026. 7. 1.' }
+        { id: 's1', title: '오픈 조 꿀팁 (수건 수거 시간)', author: '이지희', content: '오전 수건 세탁물 카트 수거는 9시 30분 이전에 해두시는 게 헬스장 혼잡 시간대와 겹치지 않아 훨씬 수월합니다.', date: '2026. 7. 2.', pinned: false },
+        { id: 's2', title: '마감 청소 팁 (스퀴지 사용)', author: '이동현', content: '마감 시 샤워부스 청소하고 바닥 밀대(스퀴지)로 물기를 싹 쓸어내 주셔야 다음 날 아침 냄새 예방에 좋습니다.', date: '2026. 7. 1.', pinned: false }
     ];
 
     function switchLoungeTab(tabName) {
@@ -1323,30 +1328,46 @@
             container.innerHTML = '<div class="lounge-empty">등록된 글이 없습니다.</div>';
             return;
         }
+
+        // 상단 고정(pinned === true) 글이 위로 오도록 정렬 (그 외에는 최신순 유지)
+        const sortedPosts = [...posts].sort((a, b) => {
+            const aPinned = a.pinned ? 1 : 0;
+            const bPinned = b.pinned ? 1 : 0;
+            return bPinned - aPinned;
+        });
         
-        posts.forEach((post, index) => {
+        sortedPosts.forEach((post) => {
             const card = document.createElement('div');
             card.className = 'lounge-card';
+            if (post.pinned) {
+                card.style.borderColor = 'var(--fw-green)';
+                card.style.backgroundColor = '#F9FBF9'; // 연한 연두색 배경으로 고정 글 강조
+            }
             card.innerHTML = `
                 <div class="lounge-card-meta">
-                    <span>👤 ${post.author}</span>
+                    <span style="display: inline-flex; align-items: center;">
+                        👤 <strong style="margin-left: 3px;">${post.author}</strong>
+                        <button class="lounge-card-delete" onclick="deleteLoungePost('${storageKey}', '${post.id}')" title="삭제">🗑️</button>
+                    </span>
                     <span>📅 ${post.date}</span>
                 </div>
-                <h4 class="lounge-card-title" style="margin: 0 0 10px 0; font-size: 16px; color: var(--fw-green); font-weight: bold; line-height: 1.4; text-align: left;">${post.title || '제목 없음'}</h4>
+                <h4 class="lounge-card-title" style="margin: 0 0 10px 0; font-size: 16px; color: var(--text-main); font-weight: bold; line-height: 1.4; text-align: left; display: flex; align-items: center;">
+                    ${post.pinned ? '<span style="background-color: var(--fw-green); color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-right: 6px; font-weight: bold; display: inline-block;">📌 고정</span>' : ''}
+                    <span>${post.title || '제목 없음'}</span>
+                </h4>
                 <div class="lounge-card-content" style="text-align: left;">${post.content.replace(/\n/g, '<br>')}</div>
-                <button class="lounge-card-delete" onclick="deleteLoungePost('${storageKey}', ${index})">🗑️</button>
             `;
             container.appendChild(card);
         });
     }
 
-    function deleteLoungePost(storageKey, index) {
+    function deleteLoungePost(storageKey, postId) {
         if (confirm("정말로 이 글을 삭제하시겠습니까?")) {
             const stored = localStorage.getItem(storageKey);
             if (stored) {
                 try {
-                    const posts = JSON.parse(stored);
-                    posts.splice(index, 1);
+                    let posts = JSON.parse(stored);
+                    posts = posts.filter(p => p.id !== postId);
                     localStorage.setItem(storageKey, JSON.stringify(posts));
                     renderLoungeList();
                 } catch(e) {
@@ -1371,6 +1392,7 @@
         document.getElementById('lounge-input-author').value = '';
         document.getElementById('lounge-input-title').value = '';
         document.getElementById('lounge-input-content').value = '';
+        document.getElementById('lounge-input-pinned').checked = false;
         modal.style.display = 'flex';
     }
 
@@ -1420,6 +1442,7 @@
             author: author,
             title: title,
             content: content,
+            pinned: document.getElementById('lounge-input-pinned').checked,
             date: new Date().toLocaleDateString()
         };
         
