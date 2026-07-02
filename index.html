@@ -303,8 +303,8 @@
         .lounge-post-list { display: flex; flex-direction: column; gap: 12px; }
         
         .lounge-card {
-            background-color: #FAFAFA; border: 1px solid var(--border-color); border-radius: 12px;
-            padding: 16px; position: relative;
+            background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 12px;
+            padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); position: relative;
             transition: transform 0.2s;
         }
         .lounge-card:active { transform: scale(0.99); }
@@ -372,9 +372,9 @@
                 🌙 마감 근무
                 <span>구역별 마감 체크리스트 및 비품 점검</span>
             </button>
-            <button class="role-btn" onclick="switchView('view-lounge')" style="border-color: var(--fw-green); background-color: #F1F8F5;">
+            <button class="role-btn" onclick="switchView('view-lounge')">
                 ☕ FaWW 라운지
-                <span style="color: var(--fw-green); font-weight: 600;">공지사항, 분실물 기록 및 근무 팁 공유</span>
+                <span>공지사항, 분실물 기록 및 근무 팁 공유</span>
             </button>
 
             <!-- 버전 정보 및 강제 업데이트 버튼 -->
