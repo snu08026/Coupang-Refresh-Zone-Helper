@@ -652,6 +652,10 @@
             window.scrollTo(0, 0);
             document.getElementById('lounge-search-input').value = '';
             renderLoungeList();
+            // 진입 시 서버에서 즉시 새 데이터 가져오기
+            syncFromServer(() => {
+                renderLoungeList();
+            });
         }
     }
 
@@ -1402,7 +1406,15 @@
                     let posts = JSON.parse(stored);
                     posts = posts.filter(p => p.id !== postId);
                     localStorage.setItem(storageKey, JSON.stringify(posts));
-                    renderLoungeList();
+                    
+                    // 서버로 즉시 업로드 동기화
+                    const notices = JSON.parse(localStorage.getItem('fw_lounge_notices')) || defaultNotices;
+                    const losts = JSON.parse(localStorage.getItem('fw_lounge_lost_found')) || defaultLosts;
+                    const shares = JSON.parse(localStorage.getItem('fw_lounge_info_share')) || defaultShares;
+                    
+                    uploadToServer(notices, losts, shares, () => {
+                        renderLoungeList();
+                    });
                 } catch(e) {
                     console.error(e);
                 }
@@ -1478,8 +1490,107 @@
         posts.unshift(newPost);
         localStorage.setItem(storageKey, JSON.stringify(posts));
         
-        switchView('view-lounge');
+        // 서버로 즉시 업로드 동기화
+        const notices = JSON.parse(localStorage.getItem('fw_lounge_notices')) || defaultNotices;
+        const losts = JSON.parse(localStorage.getItem('fw_lounge_lost_found')) || defaultLosts;
+        const shares = JSON.parse(localStorage.getItem('fw_lounge_info_share')) || defaultShares;
+        
+        uploadToServer(notices, losts, shares, () => {
+            switchView('view-lounge');
+        });
     }
+
+    // ===== 11. 클라우드 기기 간 실시간 동기화 (keyvalue.immanuel.co) =====
+    const SYNC_APP_KEY = 'datqf2xa';
+    const SYNC_DATA_KEY = 'lounge_data_v1';
+    const SYNC_URL = `https://keyvalue.immanuel.co/api/KeyVal/GetValue/${SYNC_APP_KEY}/${SYNC_DATA_KEY}`;
+    const UPDATE_URL_PREFIX = `https://keyvalue.immanuel.co/api/KeyVal/UpdateValue/${SYNC_APP_KEY}/${SYNC_DATA_KEY}/`;
+
+    // Base64url 인코더 & 디코더 (ASP.NET Request.Path 특수문자 검증 필터 바이패스용)
+    function base64urlEncode(str) {
+        const bytes = new TextEncoder().encode(str);
+        const binString = Array.from(bytes, byte => String.fromCharCode(byte)).join("");
+        const base64 = btoa(binString);
+        return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    }
+
+    function base64urlDecode(str) {
+        let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+        while (base64.length % 4) {
+            base64 += '=';
+        }
+        const binString = atob(base64);
+        const bytes = Uint8Array.from(binString, char => char.charCodeAt(0));
+        return new TextDecoder().decode(bytes);
+    }
+
+    // 서버 데이터를 로컬 스토리지에 동기화
+    function syncFromServer(callback) {
+        fetch(SYNC_URL)
+            .then(res => res.text())
+            .then(resText => {
+                let base64urlStr = resText;
+                if (base64urlStr && base64urlStr.startsWith('"') && base64urlStr.endsWith('"')) {
+                    base64urlStr = base64urlStr.slice(1, -1);
+                }
+                
+                if (base64urlStr && base64urlStr.trim() !== '') {
+                    try {
+                        const jsonStr = base64urlDecode(base64urlStr);
+                        const data = JSON.parse(jsonStr);
+                        if (data.notices && data.losts && data.shares) {
+                            localStorage.setItem('fw_lounge_notices', JSON.stringify(data.notices));
+                            localStorage.setItem('fw_lounge_lost_found', JSON.stringify(data.losts));
+                            localStorage.setItem('fw_lounge_info_share', JSON.stringify(data.shares));
+                            if (callback) callback();
+                            return;
+                        }
+                    } catch(e) {
+                        console.error("Failed to parse synced data", e);
+                    }
+                }
+                
+                // 클라우드가 비어 있으면 초기 데이터 업로드 세팅
+                const notices = JSON.parse(localStorage.getItem('fw_lounge_notices')) || defaultNotices;
+                const losts = JSON.parse(localStorage.getItem('fw_lounge_lost_found')) || defaultLosts;
+                const shares = JSON.parse(localStorage.getItem('fw_lounge_info_share')) || defaultShares;
+                uploadToServer(notices, losts, shares, () => {
+                    localStorage.setItem('fw_lounge_notices', JSON.stringify(notices));
+                    localStorage.setItem('fw_lounge_lost_found', JSON.stringify(losts));
+                    localStorage.setItem('fw_lounge_info_share', JSON.stringify(shares));
+                    if (callback) callback();
+                });
+            })
+            .catch(err => {
+                console.error("Sync error", err);
+                if (callback) callback();
+            });
+    }
+
+    // 서버로 로컬 변경 데이터 업로드
+    function uploadToServer(notices, losts, shares, callback) {
+        const data = { notices, losts, shares };
+        const jsonStr = JSON.stringify(data);
+        const base64urlStr = base64urlEncode(jsonStr);
+        
+        fetch(UPDATE_URL_PREFIX + base64urlStr, { method: 'POST' })
+            .then(() => {
+                if (callback) callback();
+            })
+            .catch(err => {
+                console.error("Upload error", err);
+                if (callback) callback();
+            });
+    }
+
+    // 5초 간격으로 기기 간 실시간 자동 동기화 폴링
+    setInterval(() => {
+        if (document.getElementById('view-lounge').classList.contains('active')) {
+            syncFromServer(() => {
+                renderLoungeList();
+            });
+        }
+    }, 5000);
 
 </script>
 
