@@ -723,10 +723,14 @@
     window.onload = () => {
         loadState();
         
-        // 상단 날짜 표시 (예: 2026년 7월 2일 목요일)
+        // 상단 날짜 표시 (예: 2026년 7월 2일 목요일) - 구형 기기 및 모든 모바일 호환용 수동 포맷
         const today = new Date();
-        const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
-        document.getElementById('header-date').textContent = today.toLocaleDateString('ko-KR', options);
+        const year = today.getFullYear();
+        const month = today.getMonth() + 1;
+        const date = today.getDate();
+        const dayNames = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
+        const dayOfWeek = dayNames[today.getDay()];
+        document.getElementById('header-date').textContent = `${year}년 ${month}월 ${date}일 ${dayOfWeek}`;
     };
 
     // PWA 서비스 워커 등록
