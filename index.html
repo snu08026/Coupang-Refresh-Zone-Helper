@@ -289,7 +289,7 @@
 <div class="app-container">
     <!-- 고정 헤더 -->
     <header class="header">
-        <img class="logo-coupang" src="coupang_logo.png" alt="Coupang" onerror="this.style.display='none'">
+        <img class="logo-coupang" src="coupang_logo.png" alt="Coupang" onerror="this.style.display='none'" onclick="triggerResetEasterEgg()" style="cursor: pointer;">
         <div class="header-center">
             <h1>Coupang Refresh Zone with FaWW</h1>
             <div id="header-date" class="header-date"></div>
@@ -407,6 +407,8 @@
     // ===== 1. 전역 변수 및 초기화 =====
     let logoClickCount = 0;
     let logoClickTimeout;
+    let coupangClickCount = 0;
+    let coupangClickTimeout;
     const members = ["이지희", "이동현", "류재진", "나강현", "김동휘", "문채이"];
     const showerConfig = { female: [1, 2, 3, 4], male: [1, 2, 3, 4, 5] };
     const supplyList = ['샴푸', '린스', '바디워시'];
@@ -781,7 +783,7 @@
         location.reload(); 
     }
 
-    // ===== 6-1. 이스터에그 (디버그용 전체 마감 강제 완료) =====
+    // ===== 6-1. 이스터에그 (디버그용 전체 마감 강제 완료 / 강제 리셋) =====
     function triggerEasterEgg() {
         if (!document.getElementById('view-close').classList.contains('active')) return;
         
@@ -816,6 +818,35 @@
         updateOverallProgress();
         
         alert("🌟 이스터에그 작동: 모든 체크리스트가 강제 마감되었습니다!");
+    }
+
+    function triggerResetEasterEgg() {
+        if (!document.getElementById('view-close').classList.contains('active')) return;
+        
+        coupangClickCount++;
+        clearTimeout(coupangClickTimeout);
+        
+        if (coupangClickCount >= 3) {
+            coupangClickCount = 0;
+            forceResetAll();
+        } else {
+            coupangClickTimeout = setTimeout(() => {
+                coupangClickCount = 0;
+            }, 1000); // 1초 내에 3번 클릭해야 작동
+        }
+    }
+
+    function forceResetAll() {
+        // 1. 폼 상태 전체 초기화
+        resetForm();
+        
+        // 2. 로직 실행 및 상태 저장
+        checkShowerLogic();
+        checkStudioLogic();
+        saveState();
+        updateOverallProgress();
+        
+        alert("🌟 이스터에그 작동: 모든 체크리스트가 초기 상태로 리셋되었습니다!");
     }
 
     // ===== 7. 이벤트 리스너 바인딩 =====
