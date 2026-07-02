@@ -1595,7 +1595,7 @@
 
     // 서버 데이터를 로컬 스토리지에 동기화
     function syncFromServer(callback) {
-        fetch(SYNC_URL)
+        fetch(SYNC_URL + "?t=" + Date.now())
             .then(res => res.text())
             .then(resText => {
                 let base64urlStr = resText;
@@ -1642,7 +1642,13 @@
         const jsonStr = JSON.stringify(data);
         const base64urlStr = base64urlEncode(jsonStr);
         
-        fetch(UPDATE_URL_PREFIX + base64urlStr, { method: 'POST' })
+        fetch(UPDATE_URL_PREFIX + base64urlStr, { 
+            method: 'POST',
+            body: '1',
+            headers: {
+                'Content-Type': 'text/plain'
+            }
+        })
             .then(() => {
                 if (callback) callback();
             })
