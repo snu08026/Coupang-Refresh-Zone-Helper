@@ -409,6 +409,10 @@
     let logoClickTimeout;
     let coupangClickCount = 0;
     let coupangClickTimeout;
+    let femaleTabClickCount = 0;
+    let femaleTabClickTimeout;
+    let maleTabClickCount = 0;
+    let maleTabClickTimeout;
     const members = ["이지희", "이동현", "류재진", "나강현", "김동휘", "문채이"];
     const showerConfig = { female: [1, 2, 3, 4], male: [1, 2, 3, 4, 5] };
     const supplyList = ['샴푸', '린스', '바디워시'];
@@ -534,6 +538,46 @@
         el.classList.add('active');
         document.querySelectorAll('.zone-list').forEach(list => list.classList.remove('active'));
         document.getElementById(`${gender}-zone`).classList.add('active');
+        
+        // 이스터에그: 탭 버튼 3번 빠르게 터치 시 해당 구역 전체 자동 마감 완료
+        if (gender === 'female') {
+            femaleTabClickCount++;
+            clearTimeout(femaleTabClickTimeout);
+            if (femaleTabClickCount >= 3) {
+                femaleTabClickCount = 0;
+                forceCompleteShowerGender('female');
+            } else {
+                femaleTabClickTimeout = setTimeout(() => { femaleTabClickCount = 0; }, 1000);
+            }
+        } else if (gender === 'male') {
+            maleTabClickCount++;
+            clearTimeout(maleTabClickTimeout);
+            if (maleTabClickCount >= 3) {
+                maleTabClickCount = 0;
+                forceCompleteShowerGender('male');
+            } else {
+                maleTabClickTimeout = setTimeout(() => { maleTabClickCount = 0; }, 1000);
+            }
+        }
+    }
+
+    function forceCompleteShowerGender(gender) {
+        const zone = document.getElementById(`${gender}-zone`);
+        if (!zone) return;
+        
+        // 1. 해당 구역의 모든 전원 체크박스 켜기 (.power-check)
+        zone.querySelectorAll('.power-check').forEach(el => el.checked = true);
+        
+        // 2. 해당 구역의 모든 비품 라디오 버튼을 '충분(high)'으로 활성화
+        zone.querySelectorAll('input[type="radio"][value="high"]').forEach(el => el.checked = true);
+        
+        // 3. 로직 실행 및 상태 저장
+        checkShowerLogic();
+        saveState();
+        updateOverallProgress();
+        
+        const genderKo = gender === 'female' ? '여자' : '남자';
+        alert(`🌟 이스터에그 작동: ${genderKo} 샤워실 모든 부스가 강제 완료되었습니다!`);
     }
 
     // event 인자 대응 (Firefox 등 전역 event가 정의되지 않은 환경 예방을 위해 switchTab 선언 개선 완료)
