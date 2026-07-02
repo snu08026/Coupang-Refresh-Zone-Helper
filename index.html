@@ -1461,9 +1461,7 @@
                     ${post.pinned ? '<span style="background-color: var(--fw-green); color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; margin-right: 8px; font-weight: bold; display: inline-block;">📌 고정</span>' : ''}
                     <span>${post.title || '제목 없음'}</span>
                 </h3>
-                <div class="lounge-card-content" style="text-align: left; font-size: 16px; line-height: 1.7; color: var(--text-main); margin-top: 15px; padding-top: 15px; border-top: 1px solid #EEE;">
-                    ${post.content.replace(/\n/g, '<br>')}
-                </div>
+                <div class="lounge-card-content" style="text-align: left; font-size: 16px; line-height: 1.7; color: var(--text-main); margin-top: 15px; padding-top: 15px; border-top: 1px solid #EEE;">${post.content.replace(/\n/g, '<br>')}</div>
             `;
             
             switchView('view-lounge-detail');
