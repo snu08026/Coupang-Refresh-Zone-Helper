@@ -1,4 +1,4 @@
-const CACHE_NAME = 'refresh-helper-v13';
+const CACHE_NAME = 'refresh-helper-v14';
 const ASSETS = [
   './',
   './index.html',
