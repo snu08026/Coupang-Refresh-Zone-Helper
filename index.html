@@ -588,6 +588,16 @@
 </div>
 
 <script>
+    // ===== 0. 클라우드 기기 간 실시간 동기화 설정 (전역 상수) =====
+    const SYNC_APP_KEY = 'datqf2xa';
+    const SYNC_DATA_KEY = 'lounge_data_v1';
+    const SYNC_URL = `https://keyvalue.immanuel.co/api/KeyVal/GetValue/${SYNC_APP_KEY}/${SYNC_DATA_KEY}`;
+
+    const SYNC_URL_CLOSING_STATE = `https://keyvalue.immanuel.co/api/KeyVal/GetValue/${SYNC_APP_KEY}/closing_state_v1`;
+    const SYNC_URL_CLOSING_DRAFTS = `https://keyvalue.immanuel.co/api/KeyVal/GetValue/${SYNC_APP_KEY}/closing_drafts_v1`;
+    const UPDATE_URL_CLOSING_STATE_PREFIX = `https://keyvalue.immanuel.co/api/KeyVal/UpdateValue/${SYNC_APP_KEY}/closing_state_v1?value=`;
+    const UPDATE_URL_CLOSING_DRAFTS_PREFIX = `https://keyvalue.immanuel.co/api/KeyVal/UpdateValue/${SYNC_APP_KEY}/closing_drafts_v1?value=`;
+
     // ===== 1. 전역 변수 및 초기화 =====
     let logoClickCount = 0;
     let logoClickTimeout;
@@ -1699,9 +1709,6 @@
     }
 
     // ===== 11. 클라우드 기기 간 실시간 동기화 (keyvalue.immanuel.co) =====
-    const SYNC_APP_KEY = 'datqf2xa';
-    const SYNC_DATA_KEY = 'lounge_data_v1';
-    const SYNC_URL = `https://keyvalue.immanuel.co/api/KeyVal/GetValue/${SYNC_APP_KEY}/${SYNC_DATA_KEY}`;
 
     // Base64url 인코더 & 디코더 (서버 인코딩 한글 깨짐 및 IIS 260자 경로 길이 제한 우회용)
     function base64urlEncode(str) {
@@ -1801,10 +1808,6 @@
     }, 5000);
 
     // ===== 12. 오픈/마감 근무 실시간 동기화 추가 로직 =====
-    const SYNC_URL_CLOSING_STATE = `https://keyvalue.immanuel.co/api/KeyVal/GetValue/${SYNC_APP_KEY}/closing_state_v1`;
-    const SYNC_URL_CLOSING_DRAFTS = `https://keyvalue.immanuel.co/api/KeyVal/GetValue/${SYNC_APP_KEY}/closing_drafts_v1`;
-    const UPDATE_URL_CLOSING_STATE_PREFIX = `https://keyvalue.immanuel.co/api/KeyVal/UpdateValue/${SYNC_APP_KEY}/closing_state_v1?value=`;
-    const UPDATE_URL_CLOSING_DRAFTS_PREFIX = `https://keyvalue.immanuel.co/api/KeyVal/UpdateValue/${SYNC_APP_KEY}/closing_drafts_v1?value=`;
 
     // 마감 드래프트 취합하여 서버 업로드
     function uploadDraftsToServer(currentAuthor, currentState) {
