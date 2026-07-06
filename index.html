@@ -1096,9 +1096,10 @@
                 let state = JSON.parse(saved);
                 const today = new Date().toDateString();
 
-                // 날짜가 다르면(자정이 지났으면) 해당 드래프트 삭제 후 리턴
+                // 날짜가 다르면(자정이 지났으면) 해당 드래프트 로컬 및 서버에서 삭제 후 리턴
                 if (state.date && state.date !== today) {
                     localStorage.removeItem(`fw_closing_state_draft_${author}`);
+                    removeDraftFromServer(author);
                     checkLockerLogic(); checkMatLogic(); checkShowerLogic(); checkStudioLogic(); updateOverallProgress();
                     return;
                 }
@@ -1160,17 +1161,14 @@
             date: new Date().toDateString()
         };
         
-        // 1. 로컬 저장
+        // 1. 로컬 저장 (마감 상태만 저장하고, 드래프트는 삭제하지 않음)
         localStorage.setItem('fw_closing_state', JSON.stringify(finalState));
-        localStorage.removeItem(`fw_closing_state_draft_${currentAuthor}`);
         
         // 2. 서버 업로드 동기화 (헬퍼 함수 사용)
         setServerValue('closing_state_v1', JSON.stringify(finalState)).then(() => {
-            // 3. 서버 드래프트 정리 및 리로드
-            removeDraftFromServer(currentAuthor, () => {
-                alert("성공적으로 마감 데이터가 저장되었습니다!\n수고하셨습니다.");
-                location.reload(); 
-            });
+            // 3. 서버 드래프트를 삭제하지 않고 유지 (자정에 자동 초기화됨)
+            alert("성공적으로 마감 데이터가 저장되었습니다!\n수고하셨습니다.");
+            location.reload(); 
         }).catch(err => {
             console.error(err);
             alert("서버 전송 중 일부 불안정이 발생했으나, 로컬에는 안전하게 제출되었습니다.");
@@ -2055,6 +2053,13 @@
             
             results.forEach(({ author, state }) => {
                 if (!state) return;
+                
+                // 만약 서버에서 가져온 드래프트의 날짜가 오늘이 아니면 (즉, 과거 날짜면) 스킵하고 서버에서 제거
+                const today = new Date().toDateString();
+                if (state.date && state.date !== today) {
+                    removeDraftFromServer(author);
+                    return;
+                }
                 
                 const localKey = `fw_closing_state_draft_${author}`;
                 const localSavedStr = localStorage.getItem(localKey);
