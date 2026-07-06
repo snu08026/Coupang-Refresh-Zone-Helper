@@ -1258,6 +1258,7 @@
     // 시작 시 데이터 로드 및 날짜 표시
     window.onload = () => {
         loadState();
+        migrateOldLoungeData();
         
         // 초기 해시 라우팅 및 히스토리 스택 초기화
         const hash = window.location.hash;
@@ -1836,6 +1837,60 @@
             headers: { 'Content-Type': 'text/plain' }
         }).catch(err => {
             console.error("Upload error for key:", key, err);
+        });
+    }
+
+    // 이전 단일 키(lounge_data_v1) 데이터를 개별 키(v2) 아키텍처로 자동 마이그레이션
+    function migrateOldLoungeData() {
+        if (localStorage.getItem('fw_lounge_migrated_v2')) return;
+
+        getServerValue('lounge_data_v1').then(oldDataStr => {
+            if (oldDataStr) {
+                try {
+                    const data = JSON.parse(oldDataStr);
+                    const notices = data.notices || [];
+                    const losts = data.losts || [];
+                    const shares = data.shares || [];
+
+                    const uploadPromises = [];
+
+                    // 1. 모든 이전 게시글을 개별 키로 업로드
+                    const noticeIds = notices.map(p => {
+                        uploadPromises.push(setServerValue(`lounge_post_${p.id}`, JSON.stringify(p)));
+                        return p.id;
+                    });
+                    const lostIds = losts.map(p => {
+                        uploadPromises.push(setServerValue(`lounge_post_${p.id}`, JSON.stringify(p)));
+                        return p.id;
+                    });
+                    const shareIds = shares.map(p => {
+                        uploadPromises.push(setServerValue(`lounge_post_${p.id}`, JSON.stringify(p)));
+                        return p.id;
+                    });
+
+                    // 2. ID 리스트 업로드
+                    uploadPromises.push(setServerValue('lounge_notice_ids_v2', JSON.stringify(noticeIds)));
+                    uploadPromises.push(setServerValue('lounge_lost_ids_v2', JSON.stringify(lostIds)));
+                    uploadPromises.push(setServerValue('lounge_share_ids_v2', JSON.stringify(shareIds)));
+
+                    Promise.all(uploadPromises).then(() => {
+                        localStorage.setItem('fw_lounge_migrated_v2', 'true');
+                        // 로컬 스토리지 업데이트 및 싱크 진행
+                        localStorage.setItem('fw_lounge_notices', JSON.stringify(notices));
+                        localStorage.setItem('fw_lounge_lost_found', JSON.stringify(losts));
+                        localStorage.setItem('fw_lounge_info_share', JSON.stringify(shares));
+                        syncFromServer(() => {
+                            renderLoungeList();
+                        });
+                    }).catch(e => console.error("Migration upload failed", e));
+
+                } catch (e) {
+                    console.error("Migration parsing failed", e);
+                    localStorage.setItem('fw_lounge_migrated_v2', 'true');
+                }
+            } else {
+                localStorage.setItem('fw_lounge_migrated_v2', 'true');
+            }
         });
     }
 
