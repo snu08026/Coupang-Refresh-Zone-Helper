@@ -394,7 +394,7 @@
             <div class="home-title">근무자를 선택해주세요</div>
             <div class="member-grid" id="member-grid"></div>
             <button class="btn-primary btn-home" style="margin-top:30px;" onclick="switchView('view-home')">홈으로 돌아가기</button>
-            <button class="btn-primary btn-back" onclick="switchView('view-home')">뒤로 가기</button>
+            <button class="btn-primary btn-back" onclick="history.back()">뒤로 가기</button>
         </div>
     </div>
 
@@ -404,7 +404,7 @@
             <div class="open-title">📝 전일 마감 근무자 특이사항</div>
             <div id="notes-content" class="notes-display"></div>
             <button class="btn-primary btn-home" onclick="switchView('view-home')">확인 완료 (처음으로)</button>
-            <button class="btn-primary btn-back" onclick="switchView('view-home')">뒤로 가기</button>
+            <button class="btn-primary btn-back" onclick="history.back()">뒤로 가기</button>
         </div>
     </div>
 
@@ -490,7 +490,7 @@
             <label class="notes-label">📝 다음 날 오픈 직원을 위한 특이사항</label>
             <textarea id="open-notes" placeholder="오픈 근무자에게 전달할 내용이나 부족한 비품 등 특이사항을 적어주세요."></textarea>
             <button class="btn-primary btn-submit" id="submit-btn" onclick="submitClosing()">최종 마감 완료</button>
-            <button class="btn-primary btn-back" onclick="switchView('view-select-member')">뒤로 가기 (근무자 재선택)</button>
+            <button class="btn-primary btn-back" onclick="history.back()">뒤로 가기 (근무자 재선택)</button>
             <button class="btn-primary btn-home" style="margin-top:10px;" onclick="switchView('view-home')">홈으로 가기</button>
         </div>
     </div>
@@ -561,7 +561,7 @@
             </div>
             
             <div class="modal-buttons" style="margin-top: auto; padding-top: 15px; border-top: 1px solid var(--border-color);">
-                <button class="btn-primary" style="background-color: #FAFAFA; border: 1px solid var(--border-color); color: var(--text-main); margin-bottom: 0; flex: 1; padding: 12px;" onclick="switchView('view-lounge')">취소</button>
+                <button class="btn-primary" style="background-color: #FAFAFA; border: 1px solid var(--border-color); color: var(--text-main); margin-bottom: 0; flex: 1; padding: 12px;" onclick="history.back()">취소</button>
                 <button class="btn-primary" style="background-color: var(--fw-green); color: white; margin-bottom: 0; flex: 1; padding: 12px;" onclick="submitLoungePost()">등록하기</button>
             </div>
         </div>
@@ -581,7 +581,7 @@
             </div>
             
             <div class="modal-buttons" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-color);">
-                <button class="btn-primary btn-home" style="margin-bottom: 0;" onclick="switchView('view-lounge')">목록으로 돌아가기</button>
+                <button class="btn-primary btn-home" style="margin-bottom: 0;" onclick="history.back()">목록으로 돌아가기</button>
             </div>
         </div>
     </div>
@@ -590,13 +590,6 @@
 <script>
     // ===== 0. 클라우드 기기 간 실시간 동기화 설정 (전역 상수) =====
     const SYNC_APP_KEY = 'datqf2xa';
-    const SYNC_DATA_KEY = 'lounge_data_v1';
-    const SYNC_URL = `https://keyvalue.immanuel.co/api/KeyVal/GetValue/${SYNC_APP_KEY}/${SYNC_DATA_KEY}`;
-
-    const SYNC_URL_CLOSING_STATE = `https://keyvalue.immanuel.co/api/KeyVal/GetValue/${SYNC_APP_KEY}/closing_state_v1`;
-    const SYNC_URL_CLOSING_DRAFTS = `https://keyvalue.immanuel.co/api/KeyVal/GetValue/${SYNC_APP_KEY}/closing_drafts_v1`;
-    const UPDATE_URL_CLOSING_STATE_PREFIX = `https://keyvalue.immanuel.co/api/KeyVal/UpdateValue/${SYNC_APP_KEY}/closing_state_v1?value=`;
-    const UPDATE_URL_CLOSING_DRAFTS_PREFIX = `https://keyvalue.immanuel.co/api/KeyVal/UpdateValue/${SYNC_APP_KEY}/closing_drafts_v1?value=`;
 
     // ===== 1. 전역 변수 및 초기화 =====
     let logoClickCount = 0;
@@ -671,12 +664,20 @@
     generateShowerZones('male');
 
     // ===== 3. 화면 전환 및 메모 로드 =====
-    function switchView(viewId) {
+    function switchView(viewId, pushState = true) {
+        const targetView = document.getElementById(viewId);
+        if (!targetView) {
+            console.error("View not found:", viewId);
+            return;
+        }
         document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
-        document.getElementById(viewId).classList.add('active');
+        targetView.classList.add('active');
+
+        if (pushState) {
+            history.pushState({ viewId: viewId }, '', '#' + viewId);
+        }
 
         if (viewId === 'view-open') loadNotesForOpen();
-        if (viewId === 'view-close') window.scrollTo(0, 0);
         if (viewId === 'view-close') {
             window.scrollTo(0, 0);
             syncDraftsFromServer();
@@ -689,6 +690,42 @@
             syncFromServer(() => {
                 renderLoungeList();
             });
+        }
+    }
+
+    // 브라우저 뒤로가기/앞으로가기 상태 변화 감지
+    window.addEventListener('popstate', (event) => {
+        if (event.state && event.state.viewId) {
+            switchView(event.state.viewId, false);
+        } else {
+            // URL에 hash가 있는 경우 해당 뷰로 이동, 없는 경우 홈으로 이동
+            const hash = window.location.hash;
+            if (hash) {
+                const viewId = hash.replace('#', '');
+                if (document.getElementById(viewId)) {
+                    switchView(viewId, false);
+                    return;
+                }
+            }
+            switchView('view-home', false);
+        }
+    });
+
+    // 해시 기반으로 이전 히스토리 스택을 가상으로 생성하여 뒤로가기 버튼이 정상 동작하도록 설정
+    function initHistory(viewId) {
+        if (viewId === 'view-home') {
+            history.replaceState({ viewId: 'view-home' }, '', '#view-home');
+        } else if (viewId === 'view-open' || viewId === 'view-select-member' || viewId === 'view-lounge') {
+            history.replaceState({ viewId: 'view-home' }, '', '#view-home');
+            history.pushState({ viewId: viewId }, '', '#' + viewId);
+        } else if (viewId === 'view-close') {
+            history.replaceState({ viewId: 'view-home' }, '', '#view-home');
+            history.pushState({ viewId: 'view-select-member' }, '', '#view-select-member');
+            history.pushState({ viewId: 'view-close' }, '', '#view-close');
+        } else if (viewId === 'view-lounge-write' || viewId === 'view-lounge-detail') {
+            history.replaceState({ viewId: 'view-home' }, '', '#view-home');
+            history.pushState({ viewId: 'view-lounge' }, '', '#view-lounge');
+            history.pushState({ viewId: viewId }, '', '#' + viewId);
         }
     }
 
@@ -733,27 +770,19 @@
         renderOpenNotes();
         
         // 서버에서 즉시 최종 마감 특이사항 내려받기
-        fetch(SYNC_URL_CLOSING_STATE + "?t=" + Date.now())
-            .then(res => res.text())
-            .then(resText => {
-                let base64urlStr = resText;
-                if (base64urlStr && base64urlStr.startsWith('"') && base64urlStr.endsWith('"')) {
-                    base64urlStr = base64urlStr.slice(1, -1);
-                }
-                if (base64urlStr && base64urlStr.trim() !== '') {
-                    try {
-                        const jsonStr = base64urlDecode(base64urlStr);
-                        const state = JSON.parse(jsonStr);
-                        if (state.notes || state.author) {
-                            localStorage.setItem('fw_closing_state', jsonStr);
-                            renderOpenNotes();
-                        }
-                    } catch(e) {
-                        console.error(e);
+        getServerValue('closing_state_v1').then(jsonStr => {
+            if (jsonStr) {
+                try {
+                    const state = JSON.parse(jsonStr);
+                    if (state.notes || state.author) {
+                        localStorage.setItem('fw_closing_state', jsonStr);
+                        renderOpenNotes();
                     }
+                } catch(e) {
+                    console.error(e);
                 }
-            })
-            .catch(err => console.error(err));
+            }
+        });
     }
 
     // ===== 4. 아코디언 동작 제어 =====
@@ -1127,23 +1156,14 @@
         localStorage.setItem('fw_closing_state', JSON.stringify(finalState));
         localStorage.removeItem(`fw_closing_state_draft_${currentAuthor}`);
         
-        // 2. 서버 업로드 동기화
-        const jsonStr = JSON.stringify(finalState);
-        const base64urlStr = base64urlEncode(jsonStr);
-        
-        fetch(UPDATE_URL_CLOSING_STATE_PREFIX + base64urlStr, {
-            method: 'POST',
-            body: '1',
-            headers: { 'Content-Type': 'text/plain' }
-        })
-        .then(() => {
+        // 2. 서버 업로드 동기화 (헬퍼 함수 사용)
+        setServerValue('closing_state_v1', JSON.stringify(finalState)).then(() => {
             // 3. 서버 드래프트 정리 및 리로드
             removeDraftFromServer(currentAuthor, () => {
                 alert("성공적으로 마감 데이터가 저장되었습니다!\n수고하셨습니다.");
                 location.reload(); 
             });
-        })
-        .catch(err => {
+        }).catch(err => {
             console.error(err);
             alert("서버 전송 중 일부 불안정이 발생했으나, 로컬에는 안전하게 제출되었습니다.");
             location.reload();
@@ -1239,6 +1259,22 @@
     window.onload = () => {
         loadState();
         
+        // 초기 해시 라우팅 및 히스토리 스택 초기화
+        const hash = window.location.hash;
+        if (hash) {
+            const viewId = hash.replace('#', '');
+            if (document.getElementById(viewId)) {
+                initHistory(viewId);
+                switchView(viewId, false);
+            } else {
+                initHistory('view-home');
+                switchView('view-home', false);
+            }
+        } else {
+            initHistory('view-home');
+            switchView('view-home', false);
+        }
+        
         // 상단 날짜 표시 (예: 2026년 7월 2일 목요일) - 구형 기기 및 모든 모바일 호환용 수동 포맷
         const today = new Date();
         const year = today.getFullYear();
@@ -1249,7 +1285,7 @@
         document.getElementById('header-date').textContent = `${year}년 ${month}월 ${date}일 ${dayOfWeek}`;
 
         // sw.js 파일에서 캐시 버전을 읽어와 동적으로 버전 정보 갱신
-        fetch('./sw.js')
+        fetch('./sw.js?t=' + Date.now())
             .then(res => res.text())
             .then(text => {
                 const match = text.match(/CACHE_NAME\s*=\s*['"]refresh-helper-v(\d+)['"]/);
@@ -1547,15 +1583,12 @@
             
             // 고정 상태 토글
             posts[postIndex].pinned = !posts[postIndex].pinned;
-            localStorage.setItem(currentDetailStorageKey, JSON.stringify(posts));
+            const targetPost = posts[postIndex];
             
-            // 서버로 즉시 업로드 동기화
-            const notices = JSON.parse(localStorage.getItem('fw_lounge_notices')) || defaultNotices;
-            const losts = JSON.parse(localStorage.getItem('fw_lounge_lost_found')) || defaultLosts;
-            const shares = JSON.parse(localStorage.getItem('fw_lounge_info_share')) || defaultShares;
-            
-            uploadToServer(notices, losts, shares, () => {
-                // 상세 보기 화면 다시 로드하여 고정 상태 UI 갱신
+            // 서버 개별 포스트 데이터 업데이트
+            setServerValue(`lounge_post_${currentDetailPostId}`, JSON.stringify(targetPost)).then(() => {
+                localStorage.setItem(currentDetailStorageKey, JSON.stringify(posts));
+                // 상세 보기 화면 다시 로드하여 UI 갱신
                 openLoungeDetail(currentDetailStorageKey, currentDetailPostId);
             });
         } catch(e) {
@@ -1593,25 +1626,43 @@
         if (!currentDetailStorageKey || !currentDetailPostId) return;
         
         if (confirm("정말로 이 글을 삭제하시겠습니까?")) {
-            const stored = localStorage.getItem(currentDetailStorageKey);
-            if (stored) {
-                try {
-                    let posts = JSON.parse(stored);
-                    posts = posts.filter(p => p.id !== currentDetailPostId);
-                    localStorage.setItem(currentDetailStorageKey, JSON.stringify(posts));
-                    
-                    // 서버로 즉시 업로드 동기화
-                    const notices = JSON.parse(localStorage.getItem('fw_lounge_notices')) || defaultNotices;
-                    const losts = JSON.parse(localStorage.getItem('fw_lounge_lost_found')) || defaultLosts;
-                    const shares = JSON.parse(localStorage.getItem('fw_lounge_info_share')) || defaultShares;
-                    
-                    uploadToServer(notices, losts, shares, () => {
-                        switchView('view-lounge');
-                    });
-                } catch(e) {
-                    console.error(e);
-                }
+            let idsKey = '';
+            if (currentDetailStorageKey === 'fw_lounge_notices') {
+                idsKey = 'lounge_notice_ids_v2';
+            } else if (currentDetailStorageKey === 'fw_lounge_lost_found') {
+                idsKey = 'lounge_lost_ids_v2';
+            } else {
+                idsKey = 'lounge_share_ids_v2';
             }
+            
+            const targetId = currentDetailPostId;
+            
+            // 1. 서버에서 최신 ID 리스트 가져오기
+            getServerValue(idsKey).then(idsStr => {
+                let serverIds = [];
+                if (idsStr) {
+                    try {
+                        serverIds = JSON.parse(idsStr);
+                    } catch(e) {}
+                }
+                
+                // 2. 삭제 대상 ID 제외
+                serverIds = serverIds.filter(id => id !== targetId);
+                
+                // 3. 업데이트된 ID 리스트 서버 전송
+                setServerValue(idsKey, JSON.stringify(serverIds)).then(() => {
+                    // 4. 로컬 스토리지 업데이트 및 뷰 전환
+                    const stored = localStorage.getItem(currentDetailStorageKey);
+                    if (stored) {
+                        try {
+                            let posts = JSON.parse(stored);
+                            posts = posts.filter(p => p.id !== targetId);
+                            localStorage.setItem(currentDetailStorageKey, JSON.stringify(posts));
+                        } catch(e) {}
+                    }
+                    switchView('view-lounge');
+                });
+            });
         }
     }
 
@@ -1655,12 +1706,16 @@
         }
         
         let storageKey = '';
+        let idsKey = '';
         if (currentLoungeTab === 'notice') {
             storageKey = 'fw_lounge_notices';
+            idsKey = 'lounge_notice_ids_v2';
         } else if (currentLoungeTab === 'lost') {
             storageKey = 'fw_lounge_lost_found';
+            idsKey = 'lounge_lost_ids_v2';
         } else {
             storageKey = 'fw_lounge_info_share';
+            idsKey = 'lounge_share_ids_v2';
         }
         
         let posts = [];
@@ -1673,9 +1728,12 @@
             }
         }
         
-        if (editingPostId) {
+        let targetPostId = editingPostId;
+        let isEdit = !!editingPostId;
+
+        if (isEdit) {
             // 수정 모드
-            const postIndex = posts.findIndex(p => p.id === editingPostId);
+            const postIndex = posts.findIndex(p => p.id === targetPostId);
             if (postIndex !== -1) {
                 posts[postIndex].author = author;
                 posts[postIndex].title = title;
@@ -1685,8 +1743,9 @@
             editingPostId = null; // 수정 모드 리셋
         } else {
             // 새 글 등록 모드
+            targetPostId = Date.now().toString();
             const newPost = {
-                id: Date.now().toString(),
+                id: targetPostId,
                 author: author,
                 title: title,
                 content: content,
@@ -1696,15 +1755,32 @@
             posts.unshift(newPost);
         }
         
-        localStorage.setItem(storageKey, JSON.stringify(posts));
+        const targetPost = posts.find(p => p.id === targetPostId);
         
-        // 서버로 즉시 업로드 동기화
-        const notices = JSON.parse(localStorage.getItem('fw_lounge_notices')) || defaultNotices;
-        const losts = JSON.parse(localStorage.getItem('fw_lounge_lost_found')) || defaultLosts;
-        const shares = JSON.parse(localStorage.getItem('fw_lounge_info_share')) || defaultShares;
-        
-        uploadToServer(notices, losts, shares, () => {
-            switchView('view-lounge');
+        // 1. 개별 포스트 데이터 먼저 업로드
+        setServerValue(`lounge_post_${targetPostId}`, JSON.stringify(targetPost)).then(() => {
+            // 2. 서버에서 최신 ID 리스트 가져와 병합 (다른 작성자의 글 누락 방지)
+            getServerValue(idsKey).then(idsStr => {
+                let serverIds = [];
+                if (idsStr) {
+                    try {
+                        serverIds = JSON.parse(idsStr);
+                    } catch(e) {}
+                }
+                
+                if (!isEdit) {
+                    if (!serverIds.includes(targetPostId)) {
+                        serverIds.unshift(targetPostId);
+                    }
+                }
+                
+                // 3. 업데이트된 ID 리스트 업로드
+                setServerValue(idsKey, JSON.stringify(serverIds)).then(() => {
+                    // 4. 로컬 스토리지에 반영 후 목록으로 복귀
+                    localStorage.setItem(storageKey, JSON.stringify(posts));
+                    switchView('view-lounge');
+                });
+            });
         });
     }
 
@@ -1728,71 +1804,151 @@
         return new TextDecoder().decode(bytes);
     }
 
-    // 서버 데이터를 로컬 스토리지에 동기화
-    function syncFromServer(callback) {
-        fetch(SYNC_URL + "?t=" + Date.now())
+    // 서버 키-값 읽기 헬퍼 (Base64url 디코딩 자동 처리)
+    function getServerValue(key) {
+        return fetch(`https://keyvalue.immanuel.co/api/KeyVal/GetValue/${SYNC_APP_KEY}/${key}?t=${Date.now()}`)
             .then(res => res.text())
-            .then(resText => {
-                let base64urlStr = resText;
-                if (base64urlStr && base64urlStr.startsWith('"') && base64urlStr.endsWith('"')) {
-                    base64urlStr = base64urlStr.slice(1, -1);
+            .then(text => {
+                if (text && text.startsWith('"') && text.endsWith('"')) {
+                    text = text.slice(1, -1);
                 }
-                
-                if (base64urlStr && base64urlStr.trim() !== '') {
-                    try {
-                        const jsonStr = base64urlDecode(base64urlStr);
-                        const data = JSON.parse(jsonStr);
-                        
-                        if (data.notices && data.losts && data.shares) {
-                            localStorage.setItem('fw_lounge_notices', JSON.stringify(data.notices));
-                            localStorage.setItem('fw_lounge_lost_found', JSON.stringify(data.losts));
-                            localStorage.setItem('fw_lounge_info_share', JSON.stringify(data.shares));
-                            if (callback) callback();
-                            return;
-                        }
-                    } catch(e) {
-                        console.error("Failed to parse synced data", e);
-                    }
+                if (!text || text.trim() === '') return null;
+                try {
+                    return base64urlDecode(text);
+                } catch (e) {
+                    console.error("Decode error for key:", key, e);
+                    return null;
                 }
-                
-                // 클라우드가 비어 있으면 초기 데이터 업로드 세팅
-                const notices = JSON.parse(localStorage.getItem('fw_lounge_notices')) || defaultNotices;
-                const losts = JSON.parse(localStorage.getItem('fw_lounge_lost_found')) || defaultLosts;
-                const shares = JSON.parse(localStorage.getItem('fw_lounge_info_share')) || defaultShares;
-                uploadToServer(notices, losts, shares, () => {
-                    localStorage.setItem('fw_lounge_notices', JSON.stringify(notices));
-                    localStorage.setItem('fw_lounge_lost_found', JSON.stringify(losts));
-                    localStorage.setItem('fw_lounge_info_share', JSON.stringify(shares));
-                    if (callback) callback();
-                });
             })
             .catch(err => {
-                console.error("Sync error", err);
-                if (callback) callback();
+                console.error("Fetch error for key:", key, err);
+                return null;
             });
     }
 
-    // 서버로 로컬 변경 데이터 업로드 (?value= 쿼리 파라미터와 Base64url을 결합하여 경로 길이 제한 및 한글 깨짐 오류 완벽 해결)
-    function uploadToServer(notices, losts, shares, callback) {
-        const data = { notices, losts, shares };
-        const jsonStr = JSON.stringify(data);
-        const base64urlStr = base64urlEncode(jsonStr);
-        const updateUrl = `https://keyvalue.immanuel.co/api/KeyVal/UpdateValue/${SYNC_APP_KEY}/${SYNC_DATA_KEY}?value=${base64urlStr}`;
-        
-        fetch(updateUrl, { 
+    // 서버 키-값 저장 헬퍼 (Base64url 인코딩 자동 처리)
+    function setServerValue(key, value) {
+        const base64urlStr = base64urlEncode(value);
+        const updateUrl = `https://keyvalue.immanuel.co/api/KeyVal/UpdateValue/${SYNC_APP_KEY}/${key}?value=${base64urlStr}`;
+        return fetch(updateUrl, {
             method: 'POST',
             body: '1',
-            headers: {
-                'Content-Type': 'text/plain'
+            headers: { 'Content-Type': 'text/plain' }
+        }).catch(err => {
+            console.error("Upload error for key:", key, err);
+        });
+    }
+
+    // 탭별로 서버와 로컬 동기화 (개별 키 분할 아키텍처)
+    function syncTabFromServer(tabName, callback) {
+        let idsKey = '';
+        let storageKey = '';
+        let defaultData = [];
+        if (tabName === 'notice') {
+            idsKey = 'lounge_notice_ids_v2';
+            storageKey = 'fw_lounge_notices';
+            defaultData = defaultNotices;
+        } else if (tabName === 'lost') {
+            idsKey = 'lounge_lost_ids_v2';
+            storageKey = 'fw_lounge_lost_found';
+            defaultData = defaultLosts;
+        } else {
+            idsKey = 'lounge_share_ids_v2';
+            storageKey = 'fw_lounge_info_share';
+            defaultData = defaultShares;
+        }
+
+        getServerValue(idsKey).then(idsStr => {
+            if (!idsStr) {
+                // 서버가 비어있는 경우 디폴트 데이터 업로드 및 초기화
+                const promises = defaultData.map(post => {
+                    return setServerValue(`lounge_post_${post.id}`, JSON.stringify(post));
+                });
+                const idsList = defaultData.map(post => post.id);
+                promises.push(setServerValue(idsKey, JSON.stringify(idsList)));
+                
+                Promise.all(promises).then(() => {
+                    localStorage.setItem(storageKey, JSON.stringify(defaultData));
+                    if (callback) callback();
+                });
+                return;
             }
-        })
-            .then(() => {
+
+            let serverIds = [];
+            try {
+                serverIds = JSON.parse(idsStr);
+            } catch(e) {
+                console.error("Failed to parse server IDs", e);
                 if (callback) callback();
-            })
-            .catch(err => {
-                console.error("Upload error", err);
+                return;
+            }
+
+            let localPosts = [];
+            try {
+                localPosts = JSON.parse(localStorage.getItem(storageKey)) || [];
+            } catch(e) {
+                localPosts = [];
+            }
+
+            const localPostsMap = new Map(localPosts.map(p => [p.id, p]));
+            const updatedPosts = [];
+            const missingIds = [];
+
+            serverIds.forEach(id => {
+                if (localPostsMap.has(id)) {
+                    updatedPosts.push(localPostsMap.get(id));
+                } else {
+                    missingIds.push(id);
+                }
+            });
+
+            if (missingIds.length === 0) {
+                localStorage.setItem(storageKey, JSON.stringify(updatedPosts));
+                if (callback) callback();
+                return;
+            }
+
+            // 누락된 게시글만 병렬로 서버에서 가져오기
+            const fetchPromises = missingIds.map(id => {
+                return getServerValue(`lounge_post_${id}`).then(postStr => {
+                    if (postStr) {
+                        try {
+                            return JSON.parse(postStr);
+                        } catch(e) {
+                            return null;
+                        }
+                    }
+                    return null;
+                });
+            });
+
+            Promise.all(fetchPromises).then(fetchedPosts => {
+                fetchedPosts.forEach(post => {
+                    if (post) {
+                        updatedPosts.push(post);
+                    }
+                });
+                
+                // 서버 ID 순서에 맞게 정렬
+                const serverIdsMap = new Map(serverIds.map((id, index) => [id, index]));
+                updatedPosts.sort((a, b) => serverIdsMap.get(a.id) - serverIdsMap.get(b.id));
+
+                localStorage.setItem(storageKey, JSON.stringify(updatedPosts));
                 if (callback) callback();
             });
+        });
+    }
+
+    // 서버 데이터를 로컬 스토리지에 동기화
+    function syncFromServer(callback) {
+        // 활성화된 탭부터 빠르게 로딩 후, 다른 탭은 백그라운드에서 동기화
+        syncTabFromServer(currentLoungeTab, () => {
+            if (callback) callback();
+            
+            // 나머지 탭 동기화
+            const otherTabs = ['notice', 'lost', 'share'].filter(t => t !== currentLoungeTab);
+            otherTabs.forEach(t => syncTabFromServer(t));
+        });
     }
 
     // 5초 간격으로 기기 간 실시간 자동 동기화 폴링
@@ -1809,107 +1965,64 @@
 
     // ===== 12. 오픈/마감 근무 실시간 동기화 추가 로직 =====
 
-    // 마감 드래프트 취합하여 서버 업로드
+    // 마감 근무자 개별 드래프트 서버 업로드
     function uploadDraftsToServer(currentAuthor, currentState) {
-        const drafts = {};
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key.startsWith('fw_closing_state_draft_')) {
-                const author = key.substring('fw_closing_state_draft_'.length);
-                try {
-                    drafts[author] = JSON.parse(localStorage.getItem(key));
-                } catch(e) {}
-            }
-        }
-        drafts[currentAuthor] = currentState;
-
-        const jsonStr = JSON.stringify(drafts);
-        const base64urlStr = base64urlEncode(jsonStr);
-        
-        fetch(UPDATE_URL_CLOSING_DRAFTS_PREFIX + base64urlStr, {
-            method: 'POST',
-            body: '1',
-            headers: { 'Content-Type': 'text/plain' }
-        }).catch(err => console.error("Draft upload error", err));
+        setServerValue(`closing_draft_${currentAuthor}_v2`, JSON.stringify(currentState));
     }
 
     // 서버 드래프트 다운로드하여 로컬 동기화
     function syncDraftsFromServer(callback) {
         const currentAuthor = localStorage.getItem('temp_author');
         
-        fetch(SYNC_URL_CLOSING_DRAFTS + "?t=" + Date.now())
-            .then(res => res.text())
-            .then(resText => {
-                let base64urlStr = resText;
-                if (base64urlStr && base64urlStr.startsWith('"') && base64urlStr.endsWith('"')) {
-                    base64urlStr = base64urlStr.slice(1, -1);
-                }
-                if (base64urlStr && base64urlStr.trim() !== '') {
+        // 모든 근무자의 드래프트를 서버에서 병렬로 다운로드
+        const promises = members.map(author => {
+            return getServerValue(`closing_draft_${author}_v2`).then(stateStr => {
+                if (stateStr) {
                     try {
-                        const jsonStr = base64urlDecode(base64urlStr);
-                        const drafts = JSON.parse(jsonStr);
-                        
-                        let updatedCurrentAuthorDraft = false;
-                        
-                        for (const [author, state] of Object.entries(drafts)) {
-                            const localKey = `fw_closing_state_draft_${author}`;
-                            const localSavedStr = localStorage.getItem(localKey);
-                            const serverSavedStr = JSON.stringify(state);
-                            
-                            if (localSavedStr !== serverSavedStr) {
-                                // 로컬 작업 중 덮어쓰기 방지 (최근 8초 이내 동작 시 잠금)
-                                if (author === currentAuthor && (Date.now() - lastLocalChangeTime < 8000)) {
-                                    continue;
-                                }
-                                
-                                localStorage.setItem(localKey, serverSavedStr);
-                                if (author === currentAuthor) {
-                                    updatedCurrentAuthorDraft = true;
-                                }
-                            }
-                        }
-                        
-                        if (updatedCurrentAuthorDraft && currentAuthor) {
-                            loadStateForAuthor(currentAuthor);
-                        }
-                    } catch(e) {
-                        console.error("Failed to parse synced drafts", e);
+                        const state = JSON.parse(stateStr);
+                        return { author, state };
+                    } catch(e) {}
+                }
+                return { author, state: null };
+            });
+        });
+        
+        Promise.all(promises).then(results => {
+            let updatedCurrentAuthorDraft = false;
+            
+            results.forEach(({ author, state }) => {
+                if (!state) return;
+                
+                const localKey = `fw_closing_state_draft_${author}`;
+                const localSavedStr = localStorage.getItem(localKey);
+                const serverSavedStr = JSON.stringify(state);
+                
+                if (localSavedStr !== serverSavedStr) {
+                    // 로컬 작업 중인 경우 덮어쓰기 방지 (최근 8초 이내 동작 시 잠금)
+                    if (author === currentAuthor && (Date.now() - lastLocalChangeTime < 8000)) {
+                        return;
+                    }
+                    
+                    localStorage.setItem(localKey, serverSavedStr);
+                    if (author === currentAuthor) {
+                        updatedCurrentAuthorDraft = true;
                     }
                 }
-                if (callback) callback();
-            })
-            .catch(err => {
-                console.error("Draft sync error", err);
-                if (callback) callback();
             });
+            
+            if (updatedCurrentAuthorDraft && currentAuthor) {
+                loadStateForAuthor(currentAuthor);
+            }
+            if (callback) callback();
+        }).catch(err => {
+            console.error("Draft sync error", err);
+            if (callback) callback();
+        });
     }
 
     // 제출 시 마감 완료된 근무자의 드래프트 정보를 서버에서 깔끔하게 제거
     function removeDraftFromServer(author, callback) {
-        const drafts = {};
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key.startsWith('fw_closing_state_draft_')) {
-                const auth = key.substring('fw_closing_state_draft_'.length);
-                if (auth !== author) {
-                    try {
-                        drafts[auth] = JSON.parse(localStorage.getItem(key));
-                    } catch(e) {}
-                }
-            }
-        }
-        
-        const jsonStr = JSON.stringify(drafts);
-        const base64urlStr = base64urlEncode(jsonStr);
-        
-        fetch(UPDATE_URL_CLOSING_DRAFTS_PREFIX + base64urlStr, {
-            method: 'POST',
-            body: '1',
-            headers: { 'Content-Type': 'text/plain' }
-        })
-        .then(() => { if (callback) callback(); })
-        .catch(err => {
-            console.error(err);
+        setServerValue(`closing_draft_${author}_v2`, "").then(() => {
             if (callback) callback();
         });
     }
