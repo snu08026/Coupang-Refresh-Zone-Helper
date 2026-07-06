@@ -696,6 +696,10 @@
     // 브라우저 뒤로가기/앞으로가기 상태 변화 감지
     window.addEventListener('popstate', (event) => {
         if (event.state && event.state.viewId) {
+            // 현재 이미 홈 화면인데 뒤로가기를 통해 홈 화면으로 가려는 경우 (홈 화면에서 뒤로가기 클릭 시) 앱 종료 유도
+            if (event.state.viewId === 'view-home' && document.getElementById('view-home').classList.contains('active')) {
+                return; // 기본 동작(앱 종료 또는 이전 페이지 이동)이 수행되도록 차단하지 않음
+            }
             switchView(event.state.viewId, false);
         } else {
             // URL에 hash가 있는 경우 해당 뷰로 이동, 없는 경우 홈으로 이동
@@ -706,6 +710,10 @@
                     switchView(viewId, false);
                     return;
                 }
+            }
+            // 해시가 없고 이미 홈 화면이 활성화된 상태라면 차단하지 않고 앱 종료
+            if (document.getElementById('view-home').classList.contains('active')) {
+                return;
             }
             switchView('view-home', false);
         }
