@@ -16,9 +16,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="아가 파우미.png">
 
-    <!-- Firebase SDK (v8) CDN 연동 -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <!-- Firebase SDK (v10 Compat) CDN 연동 -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
     <title>Coupang Refresh Zone with FaWW</title>
     <style>
@@ -649,7 +649,7 @@
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
     }
-    const db = firebase.database();
+    const db = firebase.firestore();
 
     // ===== 1. 전역 변수 및 초기화 =====
     let logoClickCount = 0;
@@ -1958,14 +1958,21 @@
 
     // ===== 11. 클라우드 기기 간 실시간 동기화 (Firebase Realtime Database) =====
 
-    // 서버 키-값 읽기 헬퍼 (Firebase RTDB 연동 및 JSON 파싱/복원 자동 처리)
+    // 서버 키-값 읽기 헬퍼 (Firebase Firestore 연동 및 JSON 파싱/복원 자동 처리)
     function getServerValue(key) {
-        return db.ref('helper/' + key).once('value')
-            .then(snapshot => {
-                const val = snapshot.val();
-                if (val === null) return null;
-                // Firebase DB에는 실제 JSON 객체로 저장되어 있으므로, 
-                // 기존 문자열 파서들과 호환되도록 Object 형태인 경우 다시 JSON stringify 처리
+        return db.collection('helper').doc(key).get()
+            .then(doc => {
+                if (!doc.exists) return null;
+                const val = doc.data();
+                if (val === null || val === undefined) return null;
+                
+                // Firestore 문서에는 필드로 데이터가 저장되어 있으므로, 
+                // 만약 { value: ... } 형태의 단일 래퍼 구조이면 value 필드를 추출하고, 
+                // 그렇지 않고 오브젝트 형태 자체이면 기존 파서들과 호환을 위해 JSON stringify 처리합니다.
+                if (val.hasOwnProperty('value') && Object.keys(val).length === 1) {
+                    return val.value;
+                }
+                
                 if (typeof val === 'object') {
                     return JSON.stringify(val);
                 }
@@ -1977,20 +1984,24 @@
             });
     }
 
-    // 서버 키-값 저장 헬퍼 (Firebase RTDB 연동 및 JSON 가독성 보완)
+    // 서버 키-값 저장 헬퍼 (Firebase Firestore 연동 및 JSON 가독성 보완)
     function setServerValue(key, value) {
         let parsedValue = value;
         try {
             // 전송되는 데이터가 JSON 문자열 포맷일 경우, 
-            // Firebase 콘솔 가독성 및 관리를 위해 JSON 객체로 파싱하여 저장 시도
+            // Firestore 콘솔 가독성 및 관리를 위해 JSON 객체로 파싱하여 저장 시도
             if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
                 parsedValue = JSON.parse(value);
+            } else {
+                // 단순 문자열 값인 경우 Firestore 문서는 Object여야 하므로 { value: "..." } 형태로 래핑하여 저장
+                parsedValue = { value: value };
             }
         } catch (e) {
             console.error("JSON parse error before upload:", e);
+            parsedValue = { value: value };
         }
 
-        return db.ref('helper/' + key).set(parsedValue)
+        return db.collection('helper').doc(key).set(parsedValue)
             .catch(err => {
                 console.error("Firebase set error for key:", key, err);
             });
