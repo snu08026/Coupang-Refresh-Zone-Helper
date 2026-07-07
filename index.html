@@ -1963,17 +1963,18 @@
         return db.collection('helper').doc(key).get()
             .then(doc => {
                 if (!doc.exists) return null;
-                const val = doc.data();
-                if (val === null || val === undefined) return null;
+                const docData = doc.data();
+                if (docData === null || docData === undefined) return null;
                 
                 // Firestore 문서에는 필드로 데이터가 저장되어 있으므로, 
                 // 만약 { value: ... } 형태의 단일 래퍼 구조이면 value 필드를 추출하고, 
                 // 그렇지 않고 오브젝트 형태 자체이면 기존 파서들과 호환을 위해 JSON stringify 처리합니다.
-                if (val.hasOwnProperty('value') && Object.keys(val).length === 1) {
-                    return val.value;
+                let val = docData;
+                if (docData.hasOwnProperty('value') && Object.keys(docData).length === 1) {
+                    val = docData.value;
                 }
                 
-                if (typeof val === 'object') {
+                if (val !== null && typeof val === 'object') {
                     return JSON.stringify(val);
                 }
                 return val;
@@ -1988,22 +1989,26 @@
     function setServerValue(key, value) {
         let parsedValue = value;
         try {
-            // 전송되는 데이터가 JSON 문자열 포맷일 경우, 
             // Firestore 콘솔 가독성 및 관리를 위해 JSON 객체로 파싱하여 저장 시도
             if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
                 parsedValue = JSON.parse(value);
-            } else {
-                // 단순 문자열 값인 경우 Firestore 문서는 Object여야 하므로 { value: "..." } 형태로 래핑하여 저장
-                parsedValue = { value: value };
             }
         } catch (e) {
             console.error("JSON parse error before upload:", e);
-            parsedValue = { value: value };
+        }
+
+        // Firestore 문서 최상위에는 Array가 직접 들어갈 수 없으므로, 
+        // Array 타입이거나 Primitive 타입인 경우 { value: ... } 형태로 래핑하여 객체화합니다.
+        if (Array.isArray(parsedValue)) {
+            parsedValue = { value: parsedValue };
+        } else if (parsedValue === null || typeof parsedValue !== 'object') {
+            parsedValue = { value: parsedValue };
         }
 
         return db.collection('helper').doc(key).set(parsedValue)
             .catch(err => {
                 console.error("Firebase set error for key:", key, err);
+                throw err;
             });
     }
 
