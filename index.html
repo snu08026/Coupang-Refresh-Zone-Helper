@@ -387,6 +387,38 @@
     </div>
 </div>
 
+<!-- 가상 구글 로그인 모달 -->
+<div id="virtual-login-modal" class="auth-overlay" style="display: none; background-color: rgba(0, 0, 0, 0.4); z-index: 10000;">
+    <div class="auth-box" style="animation: modalOpen 0.3s ease-out;">
+        <img class="google-icon" style="width: 32px; height: 32px; margin-bottom: 15px;" src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google">
+        <div class="auth-title" style="font-size: 18px; margin-bottom: 5px;">구글 계정 로그인 (모의 연동)</div>
+        <div class="auth-desc" style="font-size: 12px; margin-bottom: 20px;">구글 계정 프로필 정보를 매칭하여 연동을 수행합니다.</div>
+        
+        <div style="width: 100%; text-align: left; margin-bottom: 15px;">
+            <label style="display: block; font-weight: bold; margin-bottom: 6px; font-size: 13px; color: var(--text-main);">이름 (실명)</label>
+            <select id="virtual-login-name" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background-color: white; color: var(--text-main);">
+                <option value="" disabled selected>근무자 이름을 선택하세요</option>
+                <option value="이지희">이지희</option>
+                <option value="이동현">이동현</option>
+                <option value="류재진">류재진</option>
+                <option value="나강현">나강현</option>
+                <option value="김동휘">김동휘</option>
+                <option value="문채이">문채이</option>
+            </select>
+        </div>
+        
+        <div style="width: 100%; text-align: left; margin-bottom: 25px;">
+            <label style="display: block; font-weight: bold; margin-bottom: 6px; font-size: 13px; color: var(--text-main);">구글 이메일 주소</label>
+            <input type="email" id="virtual-login-email" placeholder="example@gmail.com" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; box-sizing: border-box; background-color: white; color: var(--text-main);">
+        </div>
+        
+        <div style="display: flex; gap: 10px; width: 100%;">
+            <button class="btn-primary" style="background-color: #FAFAFA; border: 1px solid var(--border-color); color: var(--text-main); padding: 12px; margin: 0; flex: 1; font-size: 14px;" onclick="closeVirtualLoginModal()">취소</button>
+            <button class="btn-primary" style="background-color: var(--fw-green); color: white; padding: 12px; margin: 0; flex: 1; font-size: 14px;" onclick="submitVirtualLogin()">로그인 완료</button>
+        </div>
+    </div>
+</div>
+
 <div class="app-container">
     <!-- 고정 헤더 -->
     <header class="header">
@@ -685,49 +717,83 @@
         appId: "YOUR_APP_ID"
     };
 
-    // Firebase 초기화 (이미 초기화되었는지 검증 후 초기화)
-    if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
+    // Firebase 더미 설정 여부 판단 자동화 (설정 없을 시 가상인증 및 임시 API 롤백용)
+    const isDummyConfig = !firebaseConfig.apiKey || firebaseConfig.apiKey.includes('YOUR_API_KEY') || firebaseConfig.apiKey.trim() === '';
+
+    // Firebase 초기화 (설정이 올바른 경우에만 앱 기동)
+    let db = null;
+    let auth = null;
+    let provider = null;
+
+    if (!isDummyConfig) {
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        db = firebase.firestore();
+        auth = firebase.auth();
+        provider = new firebase.auth.GoogleAuthProvider();
     }
-    const db = firebase.firestore();
-    const auth = firebase.auth();
-    const provider = new firebase.auth.GoogleAuthProvider();
     let currentUser = null;
 
-    // Google 로그인 상태 감지 및 자동 로그인 처리
-    auth.onAuthStateChanged((user) => {
+    // 세션 UI 바인딩 헬퍼
+    function applyUserSession(user) {
         const authModal = document.getElementById('auth-overlay-modal');
         const loginNameDisplay = document.getElementById('login-user-name');
         
-        if (user) {
-            currentUser = user;
-            console.log("구글 로그인 성공:", user.displayName);
-            
-            // UI 반영: 헤더에 로그인된 사용자 이름 표기
-            if (loginNameDisplay) {
-                loginNameDisplay.textContent = `👤 ${user.displayName}님 (로그아웃)`;
-            }
-            if (authModal) {
-                authModal.style.display = 'none'; // 로그인 모달 닫기
-            }
-            
-            // 로그인 완료 후 temp_author 설정 (기존 체크리스트 드래프트 호환용)
-            localStorage.setItem('temp_author', user.displayName);
-            const currentMem = document.getElementById('current-member');
-            if (currentMem) currentMem.textContent = user.displayName;
-        } else {
-            currentUser = null;
-            if (loginNameDisplay) {
-                loginNameDisplay.textContent = '';
-            }
-            if (authModal) {
-                authModal.style.display = 'flex'; // 로그인 오버레이 띄우기
-            }
+        if (loginNameDisplay) {
+            loginNameDisplay.textContent = `👤 ${user.displayName}님 (로그아웃)`;
         }
-    });
+        if (authModal) {
+            authModal.style.display = 'none';
+        }
+        
+        localStorage.setItem('temp_author', user.displayName);
+        const currentMem = document.getElementById('current-member');
+        if (currentMem) currentMem.textContent = user.displayName;
+    }
+
+    // Google 로그인 상태 감지 및 자동 로그인 처리 (통합)
+    function restoreUserSession() {
+        if (isDummyConfig) {
+            const savedVirtual = localStorage.getItem('fw_virtual_user');
+            if (savedVirtual) {
+                try {
+                    const user = JSON.parse(savedVirtual);
+                    currentUser = user;
+                    applyUserSession(user);
+                    return;
+                } catch(e) {}
+            }
+            document.getElementById('auth-overlay-modal').style.display = 'flex';
+        } else {
+            auth.onAuthStateChanged((user) => {
+                const authModal = document.getElementById('auth-overlay-modal');
+                const loginNameDisplay = document.getElementById('login-user-name');
+                
+                if (user) {
+                    currentUser = user;
+                    console.log("구글 로그인 성공:", user.displayName);
+                    applyUserSession(user);
+                } else {
+                    currentUser = null;
+                    if (loginNameDisplay) {
+                        loginNameDisplay.textContent = '';
+                    }
+                    if (authModal) {
+                        authModal.style.display = 'flex';
+                    }
+                }
+            });
+        }
+    }
 
     // 구글 로그인 팝업 호출 함수
     function loginWithGoogle() {
+        if (isDummyConfig) {
+            openVirtualLoginModal();
+            return;
+        }
+
         auth.signInWithPopup(provider)
             .then((result) => {
                 currentUser = result.user;
@@ -747,16 +813,60 @@
             });
     }
 
+    // 가상 모의 구글 로그인 핸들러
+    function openVirtualLoginModal() {
+        document.getElementById('virtual-login-modal').style.display = 'flex';
+        document.getElementById('virtual-login-name').value = '';
+        document.getElementById('virtual-login-email').value = '';
+    }
+
+    function closeVirtualLoginModal() {
+        document.getElementById('virtual-login-modal').style.display = 'none';
+    }
+
+    function submitVirtualLogin() {
+        const name = document.getElementById('virtual-login-name').value;
+        let email = document.getElementById('virtual-login-email').value.trim();
+
+        if (!name) {
+            alert("이름을 선택해 주세요!");
+            return;
+        }
+        if (!email) {
+            email = `${name}@gmail.com`;
+        }
+
+        const virtualUser = {
+            displayName: name,
+            email: email,
+            uid: `virtual_${name}_${Date.now()}`
+        };
+
+        localStorage.setItem('fw_virtual_user', JSON.stringify(virtualUser));
+        currentUser = virtualUser;
+        applyUserSession(virtualUser);
+        closeVirtualLoginModal();
+        alert(`${name}님 (가상 구글 계정) 로그인에 성공했습니다!`);
+    }
+
     // 로그아웃 함수
     function logoutFromApp() {
         if (confirm("로그아웃 하시겠습니까?")) {
-            auth.signOut().then(() => {
+            const performLocalLogout = () => {
                 localStorage.removeItem('temp_author');
+                localStorage.removeItem('fw_virtual_user');
                 alert("로그아웃 되었습니다.");
                 location.reload();
-            }).catch((err) => {
-                console.error("로그아웃 에러:", err);
-            });
+            };
+
+            if (isDummyConfig) {
+                performLocalLogout();
+            } else {
+                auth.signOut().then(performLocalLogout).catch((err) => {
+                    console.error("로그아웃 에러:", err);
+                    performLocalLogout();
+                });
+            }
         }
     }
 
@@ -774,7 +884,7 @@
     }
 
     // Firestore 오프라인 영속성 활성화 (다중 탭 지원 포함)
-    if ('indexedDB' in window) {
+    if (!isDummyConfig && 'indexedDB' in window) {
         db.enablePersistence({ synchronizeTabs: true })
             .catch((err) => {
                 if (err.code === 'failed-precondition') {
@@ -784,6 +894,11 @@
                 }
             });
     }
+
+    // 초기화 리스너
+    window.addEventListener('load', () => {
+        restoreUserSession();
+    });
 
     // ===== 1. 전역 변수 및 초기화 =====
     let logoClickCount = 0;
@@ -2188,8 +2303,34 @@
             .catch(() => null);
     }
 
+    // Base64url 인코더 & 디코더 (Immanuel 구 백엔드 동기화 롤백용)
+    function base64urlEncode(str) {
+        const bytes = new TextEncoder().encode(str);
+        const binString = Array.from(bytes, byte => String.fromCharCode(byte)).join("");
+        const base64 = btoa(binString);
+        return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    }
+
     // 서버 키-값 읽기 헬퍼 (Firebase Firestore 연동 및 JSON 파싱/복원 자동 처리)
     function getServerValue(key) {
+        if (isDummyConfig) {
+            // Immanuel API 서버에서 직접 데이터를 조회하여 동기화
+            return fetch(`https://keyvalue.immanuel.co/api/KeyVal/GetValue/datqf2xa/${key}?t=${Date.now()}`)
+                .then(res => res.text())
+                .then(text => {
+                    if (text && text.startsWith('"') && text.endsWith('"')) {
+                        text = text.slice(1, -1);
+                    }
+                    if (!text || text.trim() === '') return null;
+                    try {
+                        return decodeLegacyData(text);
+                    } catch(e) {
+                        return null;
+                    }
+                })
+                .catch(() => null);
+        }
+
         const firestorePromise = db.collection('helper').doc(key).get()
             .then(doc => {
                 if (!doc.exists) return null;
@@ -2220,6 +2361,19 @@
 
     // 서버 키-값 저장 헬퍼 (Firebase Firestore 연동 및 JSON 가독성 보완)
     function setServerValue(key, value) {
+        if (isDummyConfig) {
+            // Immanuel API 서버로 실시간 기기간 공유 업로드 처리
+            const base64urlStr = base64urlEncode(value);
+            const updateUrl = `https://keyvalue.immanuel.co/api/KeyVal/UpdateValue/datqf2xa/${key}?value=${base64urlStr}`;
+            return fetch(updateUrl, {
+                method: 'POST',
+                body: '1',
+                headers: { 'Content-Type': 'text/plain' }
+            }).catch(err => {
+                console.error("Upload error for legacy key:", key, err);
+            });
+        }
+
         let parsedValue = value;
         try {
             // Firestore 콘솔 가독성 및 관리를 위해 JSON 객체로 파싱하여 저장 시도
