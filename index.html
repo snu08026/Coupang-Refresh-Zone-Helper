@@ -393,17 +393,58 @@
         <div class="home-container">
             <div class="home-title">근무자를 선택해주세요</div>
             <div class="member-grid" id="member-grid"></div>
-            <button class="btn-primary btn-home" style="margin-top:30px;" onclick="switchView('view-home')">홈으로 돌아가기</button>
+            <button class="btn-primary btn-home" style="margin-top:30px;" onclick="goHome()">홈으로 돌아가기</button>
             <button class="btn-primary btn-back" onclick="history.back()">뒤로 가기</button>
         </div>
     </div>
 
-    <!-- [3] 오픈 근무 화면 -->
+    <!-- [3] 오픈 근무 화면 (메뉴) -->
     <div id="view-open" class="view-section">
+        <div class="home-container" style="padding: 20px 20px;">
+            <div class="home-title" style="margin-bottom: 30px;">☀️ 오픈 근무 메뉴</div>
+            <button class="role-btn" onclick="switchView('view-open-notes')">
+                📝 전일 마감 근무자 특이사항 확인
+                <span>어제 근무자가 남긴 마감 전달사항을 확인합니다.</span>
+            </button>
+            <button class="role-btn" onclick="switchView('view-open-write')">
+                ✍️ 금일 오픈 특이사항 기록
+                <span>오늘 오픈 근무를 진행하며 발생한 특이사항을 기록합니다.</span>
+            </button>
+            <button class="btn-primary btn-back" style="margin-top: 20px;" onclick="history.back()">뒤로 가기</button>
+        </div>
+    </div>
+
+    <!-- [3-A] 전일 마감 근무자 특이사항 확인 화면 -->
+    <div id="view-open-notes" class="view-section">
         <div class="open-container">
             <div class="open-title">📝 전일 마감 근무자 특이사항</div>
             <div id="notes-content" class="notes-display"></div>
-            <button class="btn-primary btn-home" onclick="switchView('view-home')">확인 완료 (처음으로)</button>
+            <button class="btn-primary btn-home" onclick="goHome()">확인 완료 (처음으로)</button>
+            <button class="btn-primary btn-back" onclick="history.back()">뒤로 가기</button>
+        </div>
+    </div>
+
+    <!-- [3-B] 금일 오픈 특이사항 기록 화면 -->
+    <div id="view-open-write" class="view-section">
+        <div class="open-container">
+            <div class="open-title">✍️ 금일 오픈 특이사항 기록</div>
+            <div style="margin-bottom: 20px; text-align: left;">
+                <label style="display: block; font-weight: bold; margin-bottom: 8px; font-size: 14px; color: var(--text-main);">작성자 이름</label>
+                <select id="open-write-author" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px; color: var(--text-main); background-color: white;">
+                    <option value="" disabled selected>근무자를 선택해주세요</option>
+                    <option value="이지희">이지희</option>
+                    <option value="이동현">이동현</option>
+                    <option value="류재진">류재진</option>
+                    <option value="나강현">나강현</option>
+                    <option value="김동휘">김동휘</option>
+                    <option value="문채이">문채이</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 25px; text-align: left;">
+                <label style="display: block; font-weight: bold; margin-bottom: 8px; font-size: 14px; color: var(--text-main);">특이사항 내용</label>
+                <textarea id="open-write-content" placeholder="오늘 오픈 근무 중 인프라나 시설, 비품 등 특이사항을 기록해 주세요. 작성 후 저장 시 클라우드를 통해 전 근무자에게 동기화됩니다." style="width: 100%; height: 200px; padding: 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px; resize: none; color: var(--text-main); font-family: inherit; line-height: 1.5; box-sizing: border-box;"></textarea>
+            </div>
+            <button class="btn-primary btn-submit active" onclick="submitOpenNotes()">저장 및 동기화</button>
             <button class="btn-primary btn-back" onclick="history.back()">뒤로 가기</button>
         </div>
     </div>
@@ -491,7 +532,7 @@
             <textarea id="open-notes" placeholder="오픈 근무자에게 전달할 내용이나 부족한 비품 등 특이사항을 적어주세요."></textarea>
             <button class="btn-primary btn-submit" id="submit-btn" onclick="submitClosing()">최종 마감 완료</button>
             <button class="btn-primary btn-back" onclick="history.back()">뒤로 가기 (근무자 재선택)</button>
-            <button class="btn-primary btn-home" style="margin-top:10px;" onclick="switchView('view-home')">홈으로 가기</button>
+            <button class="btn-primary btn-home" style="margin-top:10px;" onclick="goHome()">홈으로 가기</button>
         </div>
     </div>
 
@@ -525,7 +566,7 @@
             <!-- 글쓰기 영역 -->
             <div class="lounge-write-box">
                 <button class="btn-primary" style="background-color: var(--fw-green); color: white; margin-bottom: 12px;" onclick="openLoungeWriteForm()">✍️ 새 글 작성하기</button>
-                <button class="btn-primary btn-home" onclick="switchView('view-home')">홈으로 돌아가기</button>
+                <button class="btn-primary btn-home" onclick="goHome()">홈으로 돌아가기</button>
             </div>
         </div>
     </div>
@@ -663,6 +704,15 @@
     generateShowerZones('female');
     generateShowerZones('male');
 
+    // 홈 화면으로 히스토리 depth를 이용해 뒤로가기하여 이동 (뒤로가기 시 앱 종료 동작 유지용)
+    function goHome() {
+        if (history.state && typeof history.state.depth === 'number' && history.state.depth > 0) {
+            history.go(-history.state.depth);
+        } else {
+            switchView('view-home');
+        }
+    }
+
     // ===== 3. 화면 전환 및 메모 로드 =====
     function switchView(viewId, pushState = true) {
         const targetView = document.getElementById(viewId);
@@ -674,10 +724,16 @@
         targetView.classList.add('active');
 
         if (pushState) {
-            history.pushState({ viewId: viewId }, '', '#' + viewId);
+            let depth = 0;
+            if (viewId === 'view-home') depth = 0;
+            else if (viewId === 'view-open' || viewId === 'view-select-member' || viewId === 'view-lounge') depth = 1;
+            else if (viewId === 'view-open-notes' || viewId === 'view-open-write' || viewId === 'view-close' || viewId === 'view-lounge-write' || viewId === 'view-lounge-detail') depth = 2;
+
+            history.pushState({ viewId: viewId, depth: depth }, '', '#' + viewId);
         }
 
-        if (viewId === 'view-open') loadNotesForOpen();
+        if (viewId === 'view-open-notes') loadNotesForOpen();
+        if (viewId === 'view-open-write') loadNotesForOpenWrite();
         if (viewId === 'view-close') {
             window.scrollTo(0, 0);
             syncDraftsFromServer();
@@ -722,18 +778,22 @@
     // 해시 기반으로 이전 히스토리 스택을 가상으로 생성하여 뒤로가기 버튼이 정상 동작하도록 설정
     function initHistory(viewId) {
         if (viewId === 'view-home') {
-            history.replaceState({ viewId: 'view-home' }, '', '#view-home');
+            history.replaceState({ viewId: 'view-home', depth: 0 }, '', '#view-home');
         } else if (viewId === 'view-open' || viewId === 'view-select-member' || viewId === 'view-lounge') {
-            history.replaceState({ viewId: 'view-home' }, '', '#view-home');
-            history.pushState({ viewId: viewId }, '', '#' + viewId);
+            history.replaceState({ viewId: 'view-home', depth: 0 }, '', '#view-home');
+            history.pushState({ viewId: viewId, depth: 1 }, '', '#' + viewId);
         } else if (viewId === 'view-close') {
-            history.replaceState({ viewId: 'view-home' }, '', '#view-home');
-            history.pushState({ viewId: 'view-select-member' }, '', '#view-select-member');
-            history.pushState({ viewId: 'view-close' }, '', '#view-close');
+            history.replaceState({ viewId: 'view-home', depth: 0 }, '', '#view-home');
+            history.pushState({ viewId: 'view-select-member', depth: 1 }, '', '#view-select-member');
+            history.pushState({ viewId: 'view-close', depth: 2 }, '', '#view-close');
         } else if (viewId === 'view-lounge-write' || viewId === 'view-lounge-detail') {
-            history.replaceState({ viewId: 'view-home' }, '', '#view-home');
-            history.pushState({ viewId: 'view-lounge' }, '', '#view-lounge');
-            history.pushState({ viewId: viewId }, '', '#' + viewId);
+            history.replaceState({ viewId: 'view-home', depth: 0 }, '', '#view-home');
+            history.pushState({ viewId: 'view-lounge', depth: 1 }, '', '#view-lounge');
+            history.pushState({ viewId: viewId, depth: 2 }, '', '#' + viewId);
+        } else if (viewId === 'view-open-notes' || viewId === 'view-open-write') {
+            history.replaceState({ viewId: 'view-home', depth: 0 }, '', '#view-home');
+            history.pushState({ viewId: 'view-open', depth: 1 }, '', '#view-open');
+            history.pushState({ viewId: viewId, depth: 2 }, '', '#' + viewId);
         }
     }
 
@@ -790,6 +850,80 @@
                     console.error(e);
                 }
             }
+        });
+    }
+
+    // 오픈 근무자가 금일 특이사항을 기록하기 위한 데이터 로딩
+    function loadNotesForOpenWrite() {
+        // 로컬 데이터 로드
+        const saved = localStorage.getItem('fw_open_state');
+        if (saved) {
+            try {
+                const state = JSON.parse(saved);
+                const today = new Date().toDateString();
+                if (state.date === today) {
+                    document.getElementById('open-write-author').value = state.author || '';
+                    document.getElementById('open-write-content').value = state.notes || '';
+                } else {
+                    document.getElementById('open-write-author').value = '';
+                    document.getElementById('open-write-content').value = '';
+                }
+            } catch(e) {
+                document.getElementById('open-write-author').value = '';
+                document.getElementById('open-write-content').value = '';
+            }
+        } else {
+            document.getElementById('open-write-author').value = '';
+            document.getElementById('open-write-content').value = '';
+        }
+
+        // 서버에서 최신 데이터 동기화
+        getServerValue('open_state_v1').then(jsonStr => {
+            if (jsonStr) {
+                try {
+                    const state = JSON.parse(jsonStr);
+                    const today = new Date().toDateString();
+                    if (state.date === today) {
+                        localStorage.setItem('fw_open_state', jsonStr);
+                        document.getElementById('open-write-author').value = state.author || '';
+                        document.getElementById('open-write-content').value = state.notes || '';
+                    }
+                } catch(e) {}
+            }
+        });
+    }
+
+    // 오픈 특이사항 저장 및 서버 동기화
+    function submitOpenNotes() {
+        const author = document.getElementById('open-write-author').value;
+        const content = document.getElementById('open-write-content').value.trim();
+
+        if (!author) {
+            alert("작성자 이름을 선택해주세요!");
+            return;
+        }
+        if (!content) {
+            alert("특이사항 내용을 입력해주세요!");
+            return;
+        }
+
+        const state = {
+            author: author,
+            notes: content,
+            date: new Date().toDateString()
+        };
+
+        // 1. 로컬 저장
+        localStorage.setItem('fw_open_state', JSON.stringify(state));
+
+        // 2. 서버 업로드 동기화
+        setServerValue('open_state_v1', JSON.stringify(state)).then(() => {
+            alert("금일 오픈 특이사항이 성공적으로 저장 및 동기화되었습니다!");
+            history.back(); // 오픈 근무 메뉴로 돌아가기
+        }).catch(err => {
+            console.error(err);
+            alert("서버 전송 중 일부 불안정이 발생했으나, 로컬에는 안전하게 저장되었습니다.");
+            history.back();
         });
     }
 
@@ -1315,6 +1449,7 @@
         navigator.serviceWorker.addEventListener('controllerchange', () => {
             if (!refreshing) {
                 refreshing = true;
+                console.log('[PWA] Service Worker controller changed. Reloading page...');
                 window.location.reload();
             }
         });
@@ -1324,17 +1459,10 @@
                 .then(reg => {
                     console.log('PWA Service Worker 등록 성공:', reg.scope);
                     
-                    // 새 서비스 워커가 설치를 끝마치고 활성화될 때를 감지하여 리로드
-                    reg.addEventListener('updatefound', () => {
-                        const newWorker = reg.installing;
-                        if (newWorker) {
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'activated') {
-                                    window.location.reload();
-                                }
-                            });
-                        }
-                    });
+                    // 주기적으로 1시간마다 서비스 워커 업데이트 체크 실행
+                    setInterval(() => {
+                        reg.update();
+                    }, 1000 * 60 * 60);
                 })
                 .catch(err => console.error('PWA Service Worker 등록 실패:', err));
         });
@@ -1389,24 +1517,40 @@
 
     // ===== 9. 앱 강제 업데이트 기능 (캐시 무력화 및 등록 취소) =====
     function forceAppUpdate() {
+        const promises = [];
+
+        // 1. 서비스 워커 등록 취소
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
+            const swPromise = navigator.serviceWorker.getRegistrations().then(registrations => {
+                const subPromises = [];
                 for (let registration of registrations) {
-                    registration.unregister(); // 기존 서비스 워커 아예 등록 취소
+                    subPromises.push(registration.unregister());
                 }
+                return Promise.all(subPromises);
             });
+            promises.push(swPromise);
         }
+
+        // 2. 모든 캐시 삭제
         if ('caches' in window) {
-            caches.keys().then(names => {
+            const cachePromise = caches.keys().then(names => {
+                const subPromises = [];
                 for (let name of names) {
-                    caches.delete(name);
+                    subPromises.push(caches.delete(name));
                 }
+                return Promise.all(subPromises);
             });
+            promises.push(cachePromise);
         }
-        alert("이전 캐시와 서비스 워커를 완전히 삭제했습니다.\n확인을 누르면 웹에서 최신 버전을 다시 가져옵니다.");
-        setTimeout(() => {
+
+        // 모든 비동기 삭제 작업이 완료된 후 새로고침
+        Promise.all(promises).then(() => {
+            alert("이전 캐시와 서비스 워커를 완전히 삭제했습니다.\n확인을 누르면 최신 버전을 다시 가져옵니다.");
             window.location.reload(true);
-        }, 500);
+        }).catch(err => {
+            console.error("Force update failed:", err);
+            window.location.reload(true);
+        });
     }
 
     // ===== 10. FaWW 라운지 비즈니스 로직 =====
