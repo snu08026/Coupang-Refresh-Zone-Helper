@@ -1821,17 +1821,19 @@
         const writeTitle = document.getElementById('lounge-write-view-title');
         editingPostId = null; // 새 글 등록이므로 수정 모드 리셋
         
+        let defaultContent = '';
         if (currentLoungeTab === 'notice') {
             writeTitle.textContent = '📢 공지사항 작성';
         } else if (currentLoungeTab === 'lost') {
             writeTitle.textContent = '🔍 분실물 기록 등록';
+            defaultContent = '제목은 분실물을 써주세요.\n1. 분실물: \n2. 습득 장소: \n3. 습득 시간: ';
         } else {
             writeTitle.textContent = '💡 정보 공유 작성';
         }
         
         document.getElementById('lounge-write-author').value = '';
         document.getElementById('lounge-write-title').value = '';
-        document.getElementById('lounge-write-content').value = '';
+        document.getElementById('lounge-write-content').value = defaultContent;
         document.getElementById('lounge-write-pinned').checked = false;
         
         switchView('view-lounge-write');
