@@ -16,6 +16,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="아가 파우미.png">
 
+    <!-- Firebase SDK (v8) CDN 연동 -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
     <title>Coupang Refresh Zone with FaWW</title>
     <style>
         /* 라이트 테마 변수 */
@@ -629,8 +633,23 @@
 </div>
 
 <script>
-    // ===== 0. 클라우드 기기 간 실시간 동기화 설정 (전역 상수) =====
-    const SYNC_APP_KEY = 'datqf2xa';
+    // ===== 0. 클라우드 기기 간 실시간 동기화 설정 (Firebase SDK) =====
+    // TODO: 사용자의 Firebase 설정값으로 수정하여 사용하세요.
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+        databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_PROJECT_ID.appspot.com",
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+
+    // Firebase 초기화 (이미 초기화되었는지 검증 후 초기화)
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.database();
 
     // ===== 1. 전역 변수 및 초기화 =====
     let logoClickCount = 0;
@@ -1937,59 +1956,44 @@
         });
     }
 
-    // ===== 11. 클라우드 기기 간 실시간 동기화 (keyvalue.immanuel.co) =====
+    // ===== 11. 클라우드 기기 간 실시간 동기화 (Firebase Realtime Database) =====
 
-    // Base64url 인코더 & 디코더 (서버 인코딩 한글 깨짐 및 IIS 260자 경로 길이 제한 우회용)
-    function base64urlEncode(str) {
-        const bytes = new TextEncoder().encode(str);
-        const binString = Array.from(bytes, byte => String.fromCharCode(byte)).join("");
-        const base64 = btoa(binString);
-        return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-    }
-
-    function base64urlDecode(str) {
-        let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
-        while (base64.length % 4) {
-            base64 += '=';
-        }
-        const binString = atob(base64);
-        const bytes = Uint8Array.from(binString, char => char.charCodeAt(0));
-        return new TextDecoder().decode(bytes);
-    }
-
-    // 서버 키-값 읽기 헬퍼 (Base64url 디코딩 자동 처리)
+    // 서버 키-값 읽기 헬퍼 (Firebase RTDB 연동 및 JSON 파싱/복원 자동 처리)
     function getServerValue(key) {
-        return fetch(`https://keyvalue.immanuel.co/api/KeyVal/GetValue/${SYNC_APP_KEY}/${key}?t=${Date.now()}`)
-            .then(res => res.text())
-            .then(text => {
-                if (text && text.startsWith('"') && text.endsWith('"')) {
-                    text = text.slice(1, -1);
+        return db.ref('helper/' + key).once('value')
+            .then(snapshot => {
+                const val = snapshot.val();
+                if (val === null) return null;
+                // Firebase DB에는 실제 JSON 객체로 저장되어 있으므로, 
+                // 기존 문자열 파서들과 호환되도록 Object 형태인 경우 다시 JSON stringify 처리
+                if (typeof val === 'object') {
+                    return JSON.stringify(val);
                 }
-                if (!text || text.trim() === '') return null;
-                try {
-                    return base64urlDecode(text);
-                } catch (e) {
-                    console.error("Decode error for key:", key, e);
-                    return null;
-                }
+                return val;
             })
             .catch(err => {
-                console.error("Fetch error for key:", key, err);
+                console.error("Firebase get error for key:", key, err);
                 return null;
             });
     }
 
-    // 서버 키-값 저장 헬퍼 (Base64url 인코딩 자동 처리)
+    // 서버 키-값 저장 헬퍼 (Firebase RTDB 연동 및 JSON 가독성 보완)
     function setServerValue(key, value) {
-        const base64urlStr = base64urlEncode(value);
-        const updateUrl = `https://keyvalue.immanuel.co/api/KeyVal/UpdateValue/${SYNC_APP_KEY}/${key}?value=${base64urlStr}`;
-        return fetch(updateUrl, {
-            method: 'POST',
-            body: '1',
-            headers: { 'Content-Type': 'text/plain' }
-        }).catch(err => {
-            console.error("Upload error for key:", key, err);
-        });
+        let parsedValue = value;
+        try {
+            // 전송되는 데이터가 JSON 문자열 포맷일 경우, 
+            // Firebase 콘솔 가독성 및 관리를 위해 JSON 객체로 파싱하여 저장 시도
+            if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
+                parsedValue = JSON.parse(value);
+            }
+        } catch (e) {
+            console.error("JSON parse error before upload:", e);
+        }
+
+        return db.ref('helper/' + key).set(parsedValue)
+            .catch(err => {
+                console.error("Firebase set error for key:", key, err);
+            });
     }
 
     // 이전 단일 키(lounge_data_v1) 데이터를 개별 키(v2) 아키텍처로 자동 마이그레이션

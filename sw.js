@@ -1,4 +1,4 @@
-const CACHE_NAME = 'refresh-helper-v42';
+const CACHE_NAME = 'refresh-helper-v43';
 const ASSETS = [
   './',
   './index.html',
@@ -33,8 +33,10 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
 
-  // 1. 실시간 동기화 API나 외부 요청은 캐시하지 않고 즉시 네트워크 요청
-  if (url.hostname.includes('keyvalue.immanuel.co')) {
+  // 1. 실시간 동기화 API(Firebase 포함)나 외부 도메인 요청은 캐시하지 않고 즉시 네트워크 요청
+  if (url.hostname.includes('keyvalue.immanuel.co') || 
+      url.hostname.includes('firebaseio.com') || 
+      url.hostname.includes('googleapis.com')) {
     e.respondWith(fetch(e.request));
     return;
   }
