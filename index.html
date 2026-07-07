@@ -651,6 +651,18 @@
     }
     const db = firebase.firestore();
 
+    // Firestore 오프라인 영속성 활성화 (다중 탭 지원 포함)
+    if ('indexedDB' in window) {
+        db.enablePersistence({ synchronizeTabs: true })
+            .catch((err) => {
+                if (err.code === 'failed-precondition') {
+                    console.warn("Firestore persistence failed (multiple tabs open)");
+                } else if (err.code === 'unimplemented') {
+                    console.warn("Firestore persistence is not supported by this browser");
+                }
+            });
+    }
+
     // ===== 1. 전역 변수 및 초기화 =====
     let logoClickCount = 0;
     let logoClickTimeout;
@@ -1958,9 +1970,28 @@
 
     // ===== 11. 클라우드 기기 간 실시간 동기화 (Firebase Realtime Database) =====
 
+    // Promise 타임아웃 헬퍼 (네트워크 오프라인/설정 지연 시 무한 pending 방지)
+    function withTimeout(promise, ms, defaultValue = null) {
+        let timeoutId;
+        const timeoutPromise = new Promise((resolve) => {
+            timeoutId = setTimeout(() => {
+                console.warn(`Promise timed out after ${ms}ms.`);
+                resolve(defaultValue);
+            }, ms);
+        });
+        
+        return Promise.race([
+            promise.then(val => {
+                clearTimeout(timeoutId);
+                return val;
+            }),
+            timeoutPromise
+        ]);
+    }
+
     // 서버 키-값 읽기 헬퍼 (Firebase Firestore 연동 및 JSON 파싱/복원 자동 처리)
     function getServerValue(key) {
-        return db.collection('helper').doc(key).get()
+        const firestorePromise = db.collection('helper').doc(key).get()
             .then(doc => {
                 if (!doc.exists) return null;
                 const docData = doc.data();
@@ -1978,7 +2009,10 @@
                     return JSON.stringify(val);
                 }
                 return val;
-            })
+            });
+
+        // 3초 타임아웃 안전장치 추가 (오프라인 상태 시 펜딩 방지)
+        return withTimeout(firestorePromise, 3000, null)
             .catch(err => {
                 console.error("Firebase get error for key:", key, err);
                 return null;
@@ -2005,10 +2039,13 @@
             parsedValue = { value: parsedValue };
         }
 
-        return db.collection('helper').doc(key).set(parsedValue)
+        const firestorePromise = db.collection('helper').doc(key).set(parsedValue);
+
+        // 3초 타임아웃 안전장치 추가 (오프라인 상태 시 펜딩 방지)
+        return withTimeout(firestorePromise, 3000, true)
             .catch(err => {
                 console.error("Firebase set error for key:", key, err);
-                throw err;
+                return true; // 에러 및 타임아웃 시에도 UI 정상 진행을 위해 true 반환
             });
     }
 
