@@ -19,6 +19,7 @@
     <!-- Firebase SDK (v10 Compat) CDN 연동 -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
     <title>Coupang Refresh Zone with FaWW</title>
     <style>
@@ -345,9 +346,46 @@
         
         .lounge-empty { text-align: center; color: var(--text-muted); padding: 40px 10px; font-style: italic; font-size: 14px; }
 
+        /* 구글 로그인 모달 오버레이 스타일 */
+        .auth-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--bg-color); display: flex; align-items: center; justify-content: center;
+            z-index: 9999; padding: 20px; box-sizing: border-box;
+        }
+        .auth-box {
+            background-color: var(--card-bg); border-radius: 20px; padding: 40px 30px;
+            width: 100%; max-width: 380px; text-align: center; border: 1px solid var(--border-color);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08); display: flex; flex-direction: column; align-items: center;
+        }
+        .auth-logo { height: 60px; margin-bottom: 20px; object-fit: contain; }
+        .auth-title { font-size: 20px; font-weight: 800; color: var(--text-main); margin-bottom: 10px; }
+        .auth-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 35px; line-height: 1.5; }
+        .btn-google-login {
+            width: 100%; padding: 16px 20px; font-size: 15px; font-weight: bold;
+            background-color: #FFFFFF; color: #333333; border: 1px solid #CCCCCC;
+            border-radius: 12px; cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .btn-google-login:active { background-color: #F5F5F5; transform: scale(0.98); }
+        .google-icon { width: 18px; height: 18px; }
+
     </style>
 </head>
 <body>
+
+<!-- 구글 로그인 강제 오버레이 모달 -->
+<div id="auth-overlay-modal" class="auth-overlay" style="display: none;">
+    <div class="auth-box">
+        <img class="auth-logo" src="our_logo.png" alt="Logo" onerror="this.style.display='none'">
+        <div class="auth-title">Coupang Refresh Helper</div>
+        <div class="auth-desc">Coupang Refresh Zone 오픈/마감 근무자용 프로그램입니다.<br>서비스를 이용하시려면 구글 로그인이 필요합니다.</div>
+        <button class="btn-google-login" onclick="loginWithGoogle()">
+            <img class="google-icon" src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google">
+            구글 계정으로 로그인하기
+        </button>
+    </div>
+</div>
 
 <div class="app-container">
     <!-- 고정 헤더 -->
@@ -356,6 +394,8 @@
         <div class="header-center">
             <h1>Coupang Refresh Zone with FaWW</h1>
             <div id="header-date" class="header-date"></div>
+            <!-- 로그인 사용자명 및 로그아웃 유도 버튼 표시 영역 -->
+            <div id="login-user-name" style="font-size: 11px; font-weight: bold; color: var(--fw-green); margin-top: 2px; cursor: pointer;" onclick="logoutFromApp()" title="클릭하여 로그아웃"></div>
         </div>
         <img id="our-logo" src="our_logo.png" alt="FW" onerror="this.style.display='none'" onclick="triggerEasterEgg()" style="cursor: pointer;">
     </header>
@@ -373,7 +413,7 @@
                 ☀️ 오픈 근무
                 <span>전일 마감 특이사항 및 전달사항 확인</span>
             </button>
-            <button class="role-btn" onclick="switchView('view-select-member')">
+            <button class="role-btn" onclick="goToClosingDuty()">
                 🌙 마감 근무
                 <span>구역별 마감 체크리스트 및 비품 점검</span>
             </button>
@@ -650,6 +690,80 @@
         firebase.initializeApp(firebaseConfig);
     }
     const db = firebase.firestore();
+    const auth = firebase.auth();
+    const provider = new firebase.auth.GoogleAuthProvider();
+    let currentUser = null;
+
+    // Google 로그인 상태 감지 및 자동 로그인 처리
+    auth.onAuthStateChanged((user) => {
+        const authModal = document.getElementById('auth-overlay-modal');
+        const loginNameDisplay = document.getElementById('login-user-name');
+        
+        if (user) {
+            currentUser = user;
+            console.log("구글 로그인 성공:", user.displayName);
+            
+            // UI 반영: 헤더에 로그인된 사용자 이름 표기
+            if (loginNameDisplay) {
+                loginNameDisplay.textContent = `👤 ${user.displayName}님 (로그아웃)`;
+            }
+            if (authModal) {
+                authModal.style.display = 'none'; // 로그인 모달 닫기
+            }
+            
+            // 로그인 완료 후 temp_author 설정 (기존 체크리스트 드래프트 호환용)
+            localStorage.setItem('temp_author', user.displayName);
+            const currentMem = document.getElementById('current-member');
+            if (currentMem) currentMem.textContent = user.displayName;
+        } else {
+            currentUser = null;
+            if (loginNameDisplay) {
+                loginNameDisplay.textContent = '';
+            }
+            if (authModal) {
+                authModal.style.display = 'flex'; // 로그인 오버레이 띄우기
+            }
+        }
+    });
+
+    // 구글 로그인 팝업 호출 함수
+    function loginWithGoogle() {
+        auth.signInWithPopup(provider)
+            .then((result) => {
+                currentUser = result.user;
+                alert(`${currentUser.displayName}님, 환영합니다!`);
+            })
+            .catch((error) => {
+                console.error("구글 로그인 실패:", error);
+                alert("구글 로그인에 실패했습니다. 다시 시도해 주세요.");
+            });
+    }
+
+    // 로그아웃 함수
+    function logoutFromApp() {
+        if (confirm("로그아웃 하시겠습니까?")) {
+            auth.signOut().then(() => {
+                localStorage.removeItem('temp_author');
+                alert("로그아웃 되었습니다.");
+                location.reload();
+            }).catch((err) => {
+                console.error("로그아웃 에러:", err);
+            });
+        }
+    }
+
+    // 마감 역할 버튼 클릭 시 구글 로그인 계정 감지하여 스킵 처리
+    function goToClosingDuty() {
+        if (currentUser) {
+            const currentMem = document.getElementById('current-member');
+            if (currentMem) currentMem.textContent = currentUser.displayName;
+            localStorage.setItem('temp_author', currentUser.displayName);
+            loadStateForAuthor(currentUser.displayName);
+            switchView('view-close');
+        } else {
+            switchView('view-select-member');
+        }
+    }
 
     // Firestore 오프라인 영속성 활성화 (다중 탭 지원 포함)
     if ('indexedDB' in window) {
@@ -946,16 +1060,24 @@
                     }
                 });
             }
+            
+            // 구글 로그인 되어있는 경우 작성자 자동 매칭 선택
+            if (currentUser) {
+                const authorSelect = document.getElementById('open-write-author');
+                if (authorSelect) {
+                    authorSelect.value = currentUser.displayName;
+                }
+            }
         });
     }
 
     // 오픈 특이사항 저장 및 서버 동기화
     function submitOpenNotes() {
-        const author = document.getElementById('open-write-author').value;
+        const author = currentUser ? currentUser.displayName : document.getElementById('open-write-author').value;
         const content = document.getElementById('open-write-content').value.trim();
 
         if (!author) {
-            alert("작성자 이름을 선택해주세요!");
+            alert("작성자 이름을 선택하거나 로그인해 주세요!");
             return;
         }
         if (!content) {
@@ -965,6 +1087,8 @@
 
         const state = {
             author: author,
+            userId: currentUser ? currentUser.uid : null,
+            email: currentUser ? currentUser.email : null,
             notes: content,
             date: new Date().toDateString()
         };
@@ -1347,7 +1471,9 @@
         
         const finalState = { 
             notes: finalNotes,
-            author: currentAuthor,
+            author: currentUser ? currentUser.displayName : currentAuthor,
+            userId: currentUser ? currentUser.uid : null,
+            email: currentUser ? currentUser.email : null,
             date: new Date().toDateString()
         };
         
@@ -1887,7 +2013,17 @@
             writeTitle.textContent = '💡 정보 공유 작성';
         }
         
-        document.getElementById('lounge-write-author').value = '';
+        const authorField = document.getElementById('lounge-write-author');
+        if (currentUser) {
+            authorField.value = currentUser.displayName;
+            authorField.readOnly = true;
+            authorField.style.backgroundColor = '#EEEEEE';
+        } else {
+            authorField.value = '';
+            authorField.readOnly = false;
+            authorField.style.backgroundColor = '#FFFFFF';
+        }
+        
         document.getElementById('lounge-write-title').value = '';
         document.getElementById('lounge-write-content').value = defaultContent;
         document.getElementById('lounge-write-pinned').checked = false;
@@ -1955,7 +2091,9 @@
             targetPostId = Date.now().toString();
             const newPost = {
                 id: targetPostId,
-                author: author,
+                author: currentUser ? currentUser.displayName : author,
+                userId: currentUser ? currentUser.uid : null,
+                email: currentUser ? currentUser.email : null,
                 title: title,
                 content: content,
                 pinned: pinned,
