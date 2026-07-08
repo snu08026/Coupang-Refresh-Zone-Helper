@@ -673,27 +673,7 @@
                     <textarea id="lounge-write-content" placeholder="공유할 내용을 입력하세요" class="modal-textarea" style="flex: 1; min-height: 200px; width: 100%; box-sizing: border-box;"></textarea>
                 </div>
                 
-                <div style="text-align: left;">
-                    <label class="modal-label">📎 파일 첨부 (이미지 또는 PDF, 최대 1MB)</label>
-                    <div style="display: flex; gap: 10px; align-items: center; background-color: #FAFAFA; border: 1px solid var(--border-color); padding: 12px 16px; border-radius: 8px; box-sizing: border-box;">
-                        <input type="file" id="lounge-write-file" accept="image/*,.pdf" style="display: none;" onchange="onFileSelected(this)">
-                        <button type="button" class="btn-primary" style="background-color: var(--fw-green); color: white; margin: 0; padding: 10px 16px; font-size: 14px; width: auto; border-radius: 6px; cursor: pointer; transition: 0.2s;" onclick="document.getElementById('lounge-write-file').click()">
-                            파일 선택
-                        </button>
-                        <span id="selected-file-name" style="font-size: 14px; color: var(--text-muted); flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-left: 8px;">선택된 파일 없음</span>
-                        <button type="button" id="btn-clear-file" style="display: none; background: none; border: none; color: var(--warning-red); font-size: 18px; cursor: pointer; padding: 4px;" onclick="clearSelectedFile()">✕</button>
-                    </div>
-                    <!-- 업로드 진행률 표시 바 -->
-                    <div id="upload-progress-container" style="display: none; margin-top: 8px;">
-                        <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">
-                            <span>파일 업로드 중...</span>
-                            <span id="upload-progress-percent">0%</span>
-                        </div>
-                        <div style="width: 100%; height: 6px; background-color: #E0E0E0; border-radius: 3px; overflow: hidden;">
-                            <div id="upload-progress-bar" style="width: 0%; height: 100%; background-color: var(--fw-green); transition: width 0.1s ease-out;"></div>
-                        </div>
-                    </div>
-                </div>
+
                 
                 <div style="text-align: left; display: flex; align-items: center; gap: 8px;">
                     <input type="checkbox" id="lounge-write-pinned" style="width: 20px; height: 20px; cursor: pointer;">
@@ -1051,14 +1031,6 @@
     const showerConfig = { female: [1, 2, 3, 4], male: [1, 2, 3, 4, 5] };
     const supplyList = ['샴푸', '린스', '바디워시'];
 
-    // 라운지 게시판 파일 업로드 상태 관리 변수
-    let selectedFileDataFile = null;
-    let selectedFileDataBase64 = null;
-    let selectedFileName = "";
-    let selectedFileType = "";
-    let existingFileUrl = "";
-    let existingFileName = "";
-    let existingFileType = "";
 
     // 라운지 게시판 댓글 실시간 구독 변수
     let activeCommentsUnsubscribe = null;
@@ -1927,7 +1899,7 @@
                 }
             })
             .catch(() => {
-                document.getElementById('app-version-text').textContent = `앱 버전: v62 (오프라인)`;
+                document.getElementById('app-version-text').textContent = `앱 버전: v63 (오프라인)`;
             });
     };
 
@@ -2196,53 +2168,6 @@
                 detailCard.style.backgroundColor = '#FAFAFA';
             }
             
-            let attachmentHtml = '';
-            if (post.fileUrl) {
-                let fileUrl = post.fileUrl;
-                let hasLocalFile = true;
-                if (fileUrl.startsWith('local://')) {
-                    const localKey = fileUrl.substring(8);
-                    const localData = localStorage.getItem(localKey);
-                    if (localData) {
-                        fileUrl = localData;
-                    } else {
-                        hasLocalFile = false;
-                    }
-                }
-
-                const cleanFileName = escapeHTML(post.fileName || '첨부파일');
-                
-                if (!hasLocalFile) {
-                    attachmentHtml = `
-                        <div style="margin-top: 20px; text-align: left; border-top: 1px solid #EEE; padding-top: 15px;">
-                            <span style="font-size: 13px; font-weight: bold; color: var(--text-muted); display: block; margin-bottom: 8px;">📎 첨부 파일 (다운로드 불가)</span>
-                            <span style="font-size: 14px; color: var(--text-muted); font-style: italic;">
-                                📄 ${cleanFileName} (다른 기기에서 작성된 파일이거나 임시 파일이 만료되었습니다.)
-                            </span>
-                        </div>
-                    `;
-                } else {
-                    const isImage = post.fileType && post.fileType.startsWith('image/');
-                    if (isImage) {
-                        attachmentHtml = `
-                            <div style="margin-top: 20px; text-align: left; border-top: 1px solid #EEE; padding-top: 15px;">
-                                <span style="font-size: 13px; font-weight: bold; color: var(--fw-green); display: block; margin-bottom: 8px;">📎 첨부 이미지</span>
-                                <img src="${fileUrl}" alt="${cleanFileName}" style="max-width: 100%; max-height: 350px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); cursor: pointer;" onclick="window.open('${fileUrl}', '_blank')">
-                            </div>
-                        `;
-                    } else {
-                        attachmentHtml = `
-                            <div style="margin-top: 20px; text-align: left; border-top: 1px solid #EEE; padding-top: 15px;">
-                                <span style="font-size: 13px; font-weight: bold; color: var(--fw-green); display: block; margin-bottom: 8px;">📎 첨부 파일</span>
-                                <a href="${fileUrl}" target="_blank" download="${cleanFileName}" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 16px; background-color: var(--completed-bg); border: 1px solid var(--fw-green); border-radius: 8px; color: var(--fw-green); font-weight: bold; text-decoration: none; font-size: 14px; transition: 0.2s;">
-                                    📄 ${cleanFileName}
-                                </a>
-                            </div>
-                        `;
-                    }
-                }
-            }
-
             // 본인 작성글 또는 더미 모드일 경우에만 수정/삭제 버튼 노출
             const isMyPost = isDummyConfig || (currentUser && post.userId === currentUser.uid);
             const editBtnHtml = isMyPost ? `<button class="lounge-btn-edit" onclick="editLoungePost()" style="background-color: #EEE; border: 1px solid #CCC; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; color: var(--text-main); font-weight: bold;">✏️ 수정</button>` : '';
@@ -2267,7 +2192,6 @@
                     <span>${escapeHTML(post.title || '제목 없음')}</span>
                 </h3>
                 <div class="lounge-card-content" style="text-align: left; font-size: 16px; line-height: 1.7; color: var(--text-main); margin-top: 15px; padding-top: 15px; border-top: 1px solid #EEE;">${escapeHTML(post.content).replace(/\n/g, '<br>')}</div>
-                ${attachmentHtml}
             `;
             
             // 댓글 관련 UI 초기화
@@ -2373,18 +2297,7 @@
             document.getElementById('lounge-write-content').value = post.content;
             document.getElementById('lounge-write-pinned').checked = post.pinned;
             
-            clearSelectedFile();
-            if (post.fileUrl) {
-                existingFileUrl = post.fileUrl;
-                existingFileName = post.fileName || "";
-                existingFileType = post.fileType || "";
-                document.getElementById('selected-file-name').textContent = post.fileName || "기존 첨부파일 있음";
-                document.getElementById('btn-clear-file').style.display = 'inline-flex';
-            } else {
-                existingFileUrl = "";
-                existingFileName = "";
-                existingFileType = "";
-            }
+
             
             // 히스토리 스택에서 상세 보기(depth 2)를 글쓰기(depth 2)로 대체하여
             // 저장 완료 혹은 취소 시 history.go(-1)을 통해 깔끔하게 목록(depth 1)으로 돌아갈 수 있게 함
@@ -2443,10 +2356,6 @@
                         if (stored) {
                             try {
                                 let posts = JSON.parse(stored);
-                                const targetPost = posts.find(p => p.id === targetId);
-                                if (targetPost && targetPost.fileUrl && targetPost.fileUrl.startsWith('local://')) {
-                                    localStorage.removeItem(targetPost.fileUrl.substring(8));
-                                }
                                 posts = posts.filter(p => p.id !== targetId);
                                 localStorage.setItem(currentDetailStorageKey, JSON.stringify(posts));
                             } catch(e) {}
@@ -2457,25 +2366,12 @@
                 });
             } else {
                 // [프로덕션 모드] Firestore 컬렉션에서 문서 삭제
-                db.collection('lounge_posts').doc(targetId).get().then(doc => {
-                    if (doc.exists) {
-                        const postData = doc.data();
-                        if (postData.fileUrl && postData.fileUrl.startsWith('local://')) {
-                            localStorage.removeItem(postData.fileUrl.substring(8));
-                        }
-                    }
-                }).catch(() => {});
-                
                 db.collection('lounge_posts').doc(targetId).delete().then(() => {
                     // 또한 로컬 스토리지 캐시에서도 삭제가 있을 수 있으니 정리
                     const stored = localStorage.getItem(currentDetailStorageKey);
                     if (stored) {
                         try {
                             let posts = JSON.parse(stored);
-                            const targetPost = posts.find(p => p.id === targetId);
-                            if (targetPost && targetPost.fileUrl && targetPost.fileUrl.startsWith('local://')) {
-                                localStorage.removeItem(targetPost.fileUrl.substring(8));
-                            }
                             posts = posts.filter(p => p.id !== targetId);
                             localStorage.setItem(currentDetailStorageKey, JSON.stringify(posts));
                         } catch(e) {}
@@ -2487,58 +2383,6 @@
                 });
             }
         }
-    }
-
-    function onFileSelected(input) {
-        const file = input.files[0];
-        if (!file) return;
-        
-        const maxSize = 1024 * 1024; // 1MB
-        if (file.size > maxSize) {
-            alert("⚠️ 파일 크기 제한 초과\n\n1MB 이하의 사진 또는 PDF 파일만 업로드할 수 있습니다.");
-            input.value = "";
-            return;
-        }
-        
-        selectedFileName = file.name;
-        selectedFileType = file.type;
-        document.getElementById('selected-file-name').textContent = file.name;
-        document.getElementById('btn-clear-file').style.display = 'inline-flex';
-        
-        // Read file as Base64 for fallback/dummy use (and local fallback in production mode)
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            selectedFileDataBase64 = e.target.result;
-        };
-        reader.readAsDataURL(file);
-        
-        // Keep file object for Firebase Storage upload
-        selectedFileDataFile = file;
-        
-        existingFileUrl = "";
-        existingFileName = "";
-        existingFileType = "";
-        
-        // Reset progress bar display
-        const progressContainer = document.getElementById('upload-progress-container');
-        if (progressContainer) progressContainer.style.display = 'none';
-    }
-    
-    function clearSelectedFile() {
-        document.getElementById('lounge-write-file').value = "";
-        document.getElementById('selected-file-name').textContent = "선택된 파일 없음";
-        document.getElementById('btn-clear-file').style.display = 'none';
-        selectedFileDataFile = null;
-        selectedFileDataBase64 = null;
-        selectedFileName = "";
-        selectedFileType = "";
-        existingFileUrl = "";
-        existingFileName = "";
-        existingFileType = "";
-        
-        // Hide progress bar
-        const progressContainer = document.getElementById('upload-progress-container');
-        if (progressContainer) progressContainer.style.display = 'none';
     }
 
     function openLoungeWriteForm() {
@@ -2570,8 +2414,6 @@
         document.getElementById('lounge-write-content').value = defaultContent;
         document.getElementById('lounge-write-pinned').checked = false;
         
-        clearSelectedFile();
-        
         switchView('view-lounge-write');
     }
 
@@ -2599,7 +2441,7 @@
         if (submitBtn) {
             originalBtnText = submitBtn.textContent;
             submitBtn.disabled = true;
-            submitBtn.textContent = "업로드 및 저장 중...";
+            submitBtn.textContent = "저장 중...";
             submitBtn.style.opacity = "0.7";
         }
         
@@ -2609,243 +2451,102 @@
             targetPostId = Date.now().toString();
         }
         
-        const savePost = (fileUrl = null, fileName = null, fileType = null) => {
-            const finalFileUrl = fileUrl || existingFileUrl || null;
-            const finalFileName = fileName || (fileUrl ? selectedFileName : (existingFileUrl ? existingFileName : null));
-            const finalFileType = fileType || (fileUrl ? selectedFileType : (existingFileUrl ? existingFileType : null));
-            
-            const postObj = {
-                id: targetPostId,
-                author: author,
-                userId: currentUser ? currentUser.uid : null,
-                email: currentUser ? currentUser.email : null,
-                title: title,
-                content: content,
-                pinned: pinned,
-                date: new Date().toLocaleDateString(),
-                tab: currentLoungeTab,
-                fileUrl: finalFileUrl,
-                fileName: finalFileName,
-                fileType: finalFileType
-            };
-            
-            if (!isDummyConfig) {
-                // [프로덕션 모드] Firestore 컬렉션(lounge_posts)에 직접 저장
-                let dbPromise;
-                if (isEdit) {
-                    dbPromise = db.collection('lounge_posts').doc(targetPostId).update({
-                        author: postObj.author,
-                        title: postObj.title,
-                        content: postObj.content,
-                        pinned: postObj.pinned,
-                        fileUrl: postObj.fileUrl,
-                        fileName: postObj.fileName,
-                        fileType: postObj.fileType
-                    });
-                } else {
-                    dbPromise = db.collection('lounge_posts').doc(targetPostId).set({
-                        ...postObj,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                }
-                
-                dbPromise.then(() => {
-                    editingPostId = null;
-                    clearSelectedFile();
-                    // 목록(depth 1)으로 뒤로가기 수행 (정상 히스토리 스택 유지)
-                    history.go(-1);
-                }).catch(err => {
-                    console.error("Firestore post save failed:", err);
-                    alert("게시글 저장에 실패했습니다. 다시 시도해 주세요.");
-                    if (submitBtn) {
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = originalBtnText;
-                        submitBtn.style.opacity = "1";
-                    }
-                });
-            } else {
-                // [폴백 모드] 기존 방식대로 로컬스토리지 및 임시 백엔드 저장
-                let storageKey = '';
-                let idsKey = '';
-                if (currentLoungeTab === 'notice') {
-                    storageKey = 'fw_lounge_notices';
-                    idsKey = 'lounge_notice_ids_v2';
-                } else if (currentLoungeTab === 'lost') {
-                    storageKey = 'fw_lounge_lost_found';
-                    idsKey = 'lounge_lost_ids_v2';
-                } else {
-                    storageKey = 'fw_lounge_info_share';
-                    idsKey = 'lounge_share_ids_v2';
-                }
-                
-                let posts = [];
-                const stored = localStorage.getItem(storageKey);
-                if (stored) {
-                    try {
-                        posts = JSON.parse(stored);
-                    } catch(e) {}
-                }
-                
-                if (isEdit) {
-                    const postIndex = posts.findIndex(p => p.id === targetPostId);
-                    if (postIndex !== -1) {
-                        posts[postIndex] = { ...posts[postIndex], ...postObj };
-                    }
-                    editingPostId = null;
-                } else {
-                    posts.unshift(postObj);
-                }
-                
-                setServerValue(`lounge_post_${targetPostId}`, JSON.stringify(postObj)).then(() => {
-                    getServerValue(idsKey).then(idsStr => {
-                        let serverIds = [];
-                        if (idsStr) {
-                            try {
-                                serverIds = JSON.parse(idsStr);
-                            } catch(e) {}
-                        }
-                        if (!isEdit && !serverIds.includes(targetPostId)) {
-                            serverIds.unshift(targetPostId);
-                        }
-                        setServerValue(idsKey, JSON.stringify(serverIds)).then(() => {
-                            localStorage.setItem(storageKey, JSON.stringify(posts));
-                            clearSelectedFile();
-                            history.go(-1);
-                        });
-                    });
-                }).catch(err => {
-                    console.error("Fallback server save failed:", err);
-                    alert("서버 연결에 실패하여 게시글이 로컬에 저장되었습니다.");
-                    localStorage.setItem(storageKey, JSON.stringify(posts));
-                    clearSelectedFile();
-                    history.go(-1);
-                });
-            }
+        const postObj = {
+            id: targetPostId,
+            author: author,
+            userId: currentUser ? currentUser.uid : null,
+            email: currentUser ? currentUser.email : null,
+            title: title,
+            content: content,
+            pinned: pinned,
+            date: new Date().toLocaleDateString(),
+            tab: currentLoungeTab
         };
         
-        if (selectedFileDataFile) {
-            if (!isDummyConfig) {
-                // [프로덕션 모드] Firebase Storage 업로드
-                const progressContainer = document.getElementById('upload-progress-container');
-                const progressBar = document.getElementById('upload-progress-bar');
-                const progressPercent = document.getElementById('upload-progress-percent');
-                
-                if (progressContainer) {
-                    progressContainer.style.display = 'block';
-                    progressBar.style.width = '0%';
-                    progressPercent.textContent = '0%';
-                }
-                
-                const fileRef = storage.ref().child(`lounge_files/${Date.now()}_${selectedFileName}`);
-                const uploadTask = fileRef.put(selectedFileDataFile);
-                
-                // Firebase Storage가 활성화되지 않았거나 네트워크 차단으로 0%에서 멈추는 경우를 대비한 4초 타임아웃 안전장치
-                let isProgressed = false;
-                const timeoutId = setTimeout(() => {
-                    if (!isProgressed) {
-                        console.warn("Firebase Storage upload timed out (stuck at 0%). Canceling task to trigger local fallback...");
-                        uploadTask.cancel();
-                    }
-                }, 4000);
-                
-                uploadTask.on('state_changed', 
-                    (snapshot) => {
-                        const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-                        if (progress > 0) {
-                            isProgressed = true;
-                        }
-                        if (progressBar) progressBar.style.width = progress + '%';
-                        if (progressPercent) progressPercent.textContent = progress + '%';
-                        if (submitBtn) {
-                            submitBtn.textContent = `업로드 중 (${progress}%)...`;
-                        }
-                    }, 
-                    (err) => {
-                        clearTimeout(timeoutId);
-                        console.error("Firebase Storage upload failed, falling back to local storage:", err);
-                        if (progressContainer) progressContainer.style.display = 'none';
-                        
-                        // Storage 업로드 실패 시 로컬(localStorage) 폴백 진행
-                        const localFileKey = `fw_file_${targetPostId}`;
-                        try {
-                            localStorage.setItem(localFileKey, selectedFileDataBase64);
-                            alert("⚠️ Firebase Storage 파일 업로드 실패\n\n서버 업로드에 실패하여 파일이 로컬(이 기기)에 임시 저장되었습니다.\n다른 기기에서는 첨부파일을 볼 수 없습니다.");
-                            savePost(`local://${localFileKey}`, selectedFileName, selectedFileType);
-                        } catch (e) {
-                            console.error("Local storage save failed:", e);
-                            alert("⚠️ 파일 업로드 및 저장 실패\n\n로컬 저장소 공간이 부족하여 파일을 저장하지 못했습니다.");
-                            if (submitBtn) {
-                                submitBtn.disabled = false;
-                                submitBtn.textContent = originalBtnText;
-                                submitBtn.style.opacity = "1";
-                            }
-                        }
-                    }, 
-                    () => {
-                        clearTimeout(timeoutId);
-                        // 업로드 완료
-                        uploadTask.snapshot.ref.getDownloadURL().then(downloadURL => {
-                            if (progressContainer) progressContainer.style.display = 'none';
-                            savePost(downloadURL, selectedFileName, selectedFileType);
-                        }).catch(err => {
-                            console.error("Get download URL failed, falling back to local:", err);
-                            const localFileKey = `fw_file_${targetPostId}`;
-                            try {
-                                localStorage.setItem(localFileKey, selectedFileDataBase64);
-                                savePost(`local://${localFileKey}`, selectedFileName, selectedFileType);
-                            } catch(e) {
-                                if (submitBtn) {
-                                    submitBtn.disabled = false;
-                                    submitBtn.textContent = originalBtnText;
-                                    submitBtn.style.opacity = "1";
-                                }
-                            }
-                        });
-                    }
-                );
+        if (!isDummyConfig) {
+            // [프로덕션 모드] Firestore 컬렉션(lounge_posts)에 직접 저장
+            let dbPromise;
+            if (isEdit) {
+                dbPromise = db.collection('lounge_posts').doc(targetPostId).update({
+                    author: postObj.author,
+                    title: postObj.title,
+                    content: postObj.content,
+                    pinned: postObj.pinned
+                });
             } else {
-                // [폴백 모드] 로컬스토리지에 Base64 저장 및 local:// 참조 저장
-                const progressContainer = document.getElementById('upload-progress-container');
-                const progressBar = document.getElementById('upload-progress-bar');
-                const progressPercent = document.getElementById('upload-progress-percent');
-                
-                if (progressContainer) {
-                    progressContainer.style.display = 'block';
-                    progressBar.style.width = '0%';
-                    progressPercent.textContent = '0%';
-                }
-                
-                let progress = 0;
-                const interval = setInterval(() => {
-                    progress += 10;
-                    if (progressBar) progressBar.style.width = progress + '%';
-                    if (progressPercent) progressPercent.textContent = progress + '%';
-                    if (submitBtn) {
-                        submitBtn.textContent = `업로드 중 (${progress}%)...`;
-                    }
-                    
-                    if (progress >= 100) {
-                        clearInterval(interval);
-                        if (progressContainer) progressContainer.style.display = 'none';
-                        
-                        const localFileKey = `fw_file_${targetPostId}`;
-                        try {
-                            localStorage.setItem(localFileKey, selectedFileDataBase64);
-                            savePost(`local://${localFileKey}`, selectedFileName, selectedFileType);
-                        } catch (e) {
-                            console.error("Local storage save failed:", e);
-                            alert("⚠️ 파일 저장 실패\n\n로컬 저장소 공간이 부족하여 파일을 저장하지 못했습니다.");
-                            if (submitBtn) {
-                                submitBtn.disabled = false;
-                                submitBtn.textContent = originalBtnText;
-                                submitBtn.style.opacity = "1";
-                            }
-                        }
-                    }
-                }, 50);
+                dbPromise = db.collection('lounge_posts').doc(targetPostId).set({
+                    ...postObj,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
             }
+            
+            dbPromise.then(() => {
+                editingPostId = null;
+                history.go(-1);
+            }).catch(err => {
+                console.error("Firestore post save failed:", err);
+                alert("게시글 저장에 실패했습니다. 다시 시도해 주세요.");
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalBtnText;
+                    submitBtn.style.opacity = "1";
+                }
+            });
         } else {
-            savePost();
+            // [폴백 모드] 기존 방식대로 로컬스토리지 및 임시 백엔드 저장
+            let storageKey = '';
+            let idsKey = '';
+            if (currentLoungeTab === 'notice') {
+                storageKey = 'fw_lounge_notices';
+                idsKey = 'lounge_notice_ids_v2';
+            } else if (currentLoungeTab === 'lost') {
+                storageKey = 'fw_lounge_lost_found';
+                idsKey = 'lounge_lost_ids_v2';
+            } else {
+                storageKey = 'fw_lounge_info_share';
+                idsKey = 'lounge_share_ids_v2';
+            }
+            
+            let posts = [];
+            const stored = localStorage.getItem(storageKey);
+            if (stored) {
+                try {
+                    posts = JSON.parse(stored);
+                } catch(e) {}
+            }
+            
+            if (isEdit) {
+                const postIndex = posts.findIndex(p => p.id === targetPostId);
+                if (postIndex !== -1) {
+                    posts[postIndex] = { ...posts[postIndex], ...postObj };
+                }
+                editingPostId = null;
+            } else {
+                posts.unshift(postObj);
+            }
+            
+            setServerValue(`lounge_post_${targetPostId}`, JSON.stringify(postObj)).then(() => {
+                getServerValue(idsKey).then(idsStr => {
+                    let serverIds = [];
+                    if (idsStr) {
+                        try {
+                            serverIds = JSON.parse(idsStr);
+                        } catch(e) {}
+                    }
+                    if (!isEdit && !serverIds.includes(targetPostId)) {
+                        serverIds.unshift(targetPostId);
+                    }
+                    setServerValue(idsKey, JSON.stringify(serverIds)).then(() => {
+                        localStorage.setItem(storageKey, JSON.stringify(posts));
+                        history.go(-1);
+                    });
+                });
+            }).catch(err => {
+                console.error("Fallback server save failed:", err);
+                alert("서버 연결에 실패하여 게시글이 로컬에 저장되었습니다.");
+                localStorage.setItem(storageKey, JSON.stringify(posts));
+                history.go(-1);
+            });
         }
     }
 
