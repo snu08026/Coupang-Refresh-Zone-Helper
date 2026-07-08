@@ -1,4 +1,4 @@
-const CACHE_NAME = 'refresh-helper-v57';
+const CACHE_NAME = 'refresh-helper-v60';
 const ASSETS = [
   './',
   './index.html',
@@ -11,7 +11,14 @@ self.addEventListener('install', (e) => {
   self.skipWaiting(); // 새로운 서비스 워커를 즉시 대기 상태에서 활성화 단계로 이동시킴
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
+      // 개별 파일별로 캐싱을 시도하여, 하나가 실패하더라도 서비스 워커 설치가 무산되지 않도록 방지
+      return Promise.allSettled(
+        ASSETS.map(asset => {
+          return cache.add(asset).catch(err => {
+            console.warn(`[PWA] Failed to cache asset: ${asset}`, err);
+          });
+        })
+      );
     })
   );
 });
