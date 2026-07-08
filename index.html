@@ -791,6 +791,8 @@
                     currentUser = user;
                     console.log("구글 로그인 성공:", user.displayName);
                     applyUserSession(user);
+                    // 로그인 성공 후 안전하게 기존 데이터 마이그레이션 실행
+                    migrateLoungePostsToFirestore();
                 } else {
                     currentUser = null;
                     if (loginNameDisplay) {
@@ -1819,9 +1821,6 @@
     window.onload = () => {
         loadState();
         migrateOldLoungeData();
-        if (!isDummyConfig) {
-            migrateLoungePostsToFirestore();
-        }
         
         // 초기 해시 라우팅 및 히스토리 스택 초기화
         const hash = window.location.hash;
@@ -2758,7 +2757,7 @@
     // helper 컬렉션에 있던 기존 게시글들을 Firestore lounge_posts 컬렉션으로 일괄 자동 이전
     function migrateLoungePostsToFirestore() {
         if (isDummyConfig || !db) return;
-        if (localStorage.getItem('fw_lounge_migrated_to_lounge_posts_v3')) return;
+        if (localStorage.getItem('fw_lounge_migrated_to_lounge_posts_v4')) return;
 
         console.log("[Migration] starting Firestore migration...");
 
@@ -2800,7 +2799,7 @@
             });
 
             if (fetchPromises.length === 0) {
-                localStorage.setItem('fw_lounge_migrated_to_lounge_posts_v3', 'true');
+                localStorage.setItem('fw_lounge_migrated_to_lounge_posts_v4', 'true');
                 console.log("[Migration] no posts to migrate.");
                 return;
             }
@@ -2837,7 +2836,7 @@
 
                 if (writePromises.length > 0) {
                     Promise.all(writePromises).then(() => {
-                        localStorage.setItem('fw_lounge_migrated_to_lounge_posts_v3', 'true');
+                        localStorage.setItem('fw_lounge_migrated_to_lounge_posts_v4', 'true');
                         console.log("[Migration] Successfully migrated " + writePromises.length + " posts to lounge_posts collection.");
                         alert(`📂 라운지 데이터 이전 완료\n\n이전 시스템에 작성된 ${writePromises.length}개의 게시글이 성공적으로 동기화되었습니다!`);
                         renderLoungeList();
@@ -2845,7 +2844,7 @@
                         console.error("[Migration] write error:", err);
                     });
                 } else {
-                    localStorage.setItem('fw_lounge_migrated_to_lounge_posts_v3', 'true');
+                    localStorage.setItem('fw_lounge_migrated_to_lounge_posts_v4', 'true');
                     console.log("[Migration] no valid posts migrated.");
                 }
             });
