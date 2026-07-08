@@ -770,6 +770,17 @@
     }
     let currentUser = null;
 
+    // XSS 방지를 위한 HTML 문자열 이스케이프 헬퍼 함수
+    function escapeHTML(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
     // 세션 UI 바인딩 헬퍼
     function applyUserSession(user) {
         const authModal = document.getElementById('auth-overlay-modal');
@@ -1234,7 +1245,7 @@
                             console.error(err);
                         }
                     }
-                    displayArea.innerHTML = `<span class="author-tag">작성자: ${state.author || '알 수 없음'}${dateStr}</span>${state.notes.replace(/\n/g, '<br>')}`;
+                    displayArea.innerHTML = `<span class="author-tag">작성자: ${escapeHTML(state.author || '알 수 없음')}${dateStr}</span>${escapeHTML(state.notes).replace(/\n/g, '<br>')}`;
                     displayArea.classList.remove('no-notes');
                     return;
                 }
@@ -2103,13 +2114,13 @@
             }
             card.innerHTML = `
                 <div class="lounge-card-meta" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
-                    <span>👤 <strong style="margin-left: 3px;">${post.author}</strong></span>
+                    <span>👤 <strong style="margin-left: 3px;">${escapeHTML(post.author)}</strong></span>
                     <span>📅 ${post.date}</span>
                 </div>
                 <h4 class="lounge-card-title" style="margin: 8px 0 0 0; font-size: 16px; color: var(--text-main); font-weight: bold; line-height: 1.4; text-align: left; display: flex; align-items: center; justify-content: space-between; width: 100%;">
                     <span style="display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                         ${post.pinned ? '<span style="background-color: var(--fw-green); color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-right: 6px; font-weight: bold; display: inline-block;">📌 고정</span>' : ''}
-                        <span>${post.title || '제목 없음'}</span>
+                        <span>${escapeHTML(post.title || '제목 없음')}</span>
                     </span>
                     ${post.fileUrl ? '<span style="color: var(--fw-green); font-size: 14px; margin-left: 8px; flex-shrink: 0;" title="첨부파일 있음">📎</span>' : ''}
                 </h4>
@@ -2149,44 +2160,50 @@
             let attachmentHtml = '';
             if (post.fileUrl) {
                 const isImage = post.fileType && post.fileType.startsWith('image/');
+                const cleanFileName = escapeHTML(post.fileName || '첨부파일');
                 if (isImage) {
                     attachmentHtml = `
                         <div style="margin-top: 20px; text-align: left; border-top: 1px solid #EEE; padding-top: 15px;">
                             <span style="font-size: 13px; font-weight: bold; color: var(--fw-green); display: block; margin-bottom: 8px;">📎 첨부 이미지</span>
-                            <img src="${post.fileUrl}" alt="${post.fileName || '첨부 이미지'}" style="max-width: 100%; max-height: 350px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); cursor: pointer;" onclick="window.open('${post.fileUrl}', '_blank')">
+                            <img src="${post.fileUrl}" alt="${cleanFileName}" style="max-width: 100%; max-height: 350px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); cursor: pointer;" onclick="window.open('${post.fileUrl}', '_blank')">
                         </div>
                     `;
                 } else {
                     attachmentHtml = `
                         <div style="margin-top: 20px; text-align: left; border-top: 1px solid #EEE; padding-top: 15px;">
                             <span style="font-size: 13px; font-weight: bold; color: var(--fw-green); display: block; margin-bottom: 8px;">📎 첨부 파일</span>
-                            <a href="${post.fileUrl}" target="_blank" download="${post.fileName}" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 16px; background-color: var(--completed-bg); border: 1px solid var(--fw-green); border-radius: 8px; color: var(--fw-green); font-weight: bold; text-decoration: none; font-size: 14px; transition: 0.2s;">
-                                📄 ${post.fileName || '파일 다운로드'}
+                            <a href="${post.fileUrl}" target="_blank" download="${cleanFileName}" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 16px; background-color: var(--completed-bg); border: 1px solid var(--fw-green); border-radius: 8px; color: var(--fw-green); font-weight: bold; text-decoration: none; font-size: 14px; transition: 0.2s;">
+                                📄 ${cleanFileName}
                             </a>
                         </div>
                     `;
                 }
             }
 
+            // 본인 작성글 또는 더미 모드일 경우에만 수정/삭제 버튼 노출
+            const isMyPost = isDummyConfig || (currentUser && post.userId === currentUser.uid);
+            const editBtnHtml = isMyPost ? `<button class="lounge-btn-edit" onclick="editLoungePost()" style="background-color: #EEE; border: 1px solid #CCC; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; color: var(--text-main); font-weight: bold;">✏️ 수정</button>` : '';
+            const deleteBtnHtml = isMyPost ? `<button class="lounge-card-delete" onclick="deleteLoungePostFromDetail()" title="삭제" style="background-color: #FFEBEE; border: 1px solid #FFCDD2; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; color: #C62828; font-weight: bold; margin: 0;">🗑️ 삭제</button>` : '';
+
             detailCard.innerHTML = `
                 <div class="lounge-card-meta" style="font-size: 13px; margin-bottom: 15px; border-bottom: 1px dashed #EEE; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                     <span style="display: inline-flex; align-items: center;">
-                        👤 <strong style="margin-left: 3px;">작성자: ${post.author}</strong>
+                        👤 <strong style="margin-left: 3px;">작성자: ${escapeHTML(post.author)}</strong>
                     </span>
                     <span style="display: inline-flex; align-items: center; gap: 6px;">
-                        <button class="lounge-btn-edit" onclick="editLoungePost()" style="background-color: #EEE; border: 1px solid #CCC; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; color: var(--text-main); font-weight: bold;">✏️ 수정</button>
+                        ${editBtnHtml}
                         <button class="lounge-btn-pin" onclick="togglePinLoungePost()" style="background-color: #E8F5E9; border: 1px solid #C8E6C9; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; color: var(--fw-green); font-weight: bold;">
                             ${post.pinned ? '📌 고정 해제' : '📌 상단 고정'}
                         </button>
-                        <button class="lounge-card-delete" onclick="deleteLoungePostFromDetail()" title="삭제" style="background-color: #FFEBEE; border: 1px solid #FFCDD2; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; color: #C62828; font-weight: bold; margin: 0;">🗑️ 삭제</button>
+                        ${deleteBtnHtml}
                     </span>
                     <span style="width: 100%; text-align: right; font-size: 11px; color: #888; margin-top: 4px;">📅 작성일: ${post.date}</span>
                 </div>
                 <h3 class="lounge-card-title" style="margin: 0 0 15px 0; font-size: 19px; color: var(--text-main); font-weight: bold; line-height: 1.4; display: flex; align-items: center; text-align: left;">
                     ${post.pinned ? '<span style="background-color: var(--fw-green); color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; margin-right: 8px; font-weight: bold; display: inline-block;">📌 고정</span>' : ''}
-                    <span>${post.title || '제목 없음'}</span>
+                    <span>${escapeHTML(post.title || '제목 없음')}</span>
                 </h3>
-                <div class="lounge-card-content" style="text-align: left; font-size: 16px; line-height: 1.7; color: var(--text-main); margin-top: 15px; padding-top: 15px; border-top: 1px solid #EEE;">${post.content.replace(/\n/g, '<br>')}</div>
+                <div class="lounge-card-content" style="text-align: left; font-size: 16px; line-height: 1.7; color: var(--text-main); margin-top: 15px; padding-top: 15px; border-top: 1px solid #EEE;">${escapeHTML(post.content).replace(/\n/g, '<br>')}</div>
                 ${attachmentHtml}
             `;
             
@@ -2317,6 +2334,19 @@
 
     function deleteLoungePostFromDetail() {
         if (!currentDetailStorageKey || !currentDetailPostId) return;
+        
+        // 권한 확인 (본인이 작성한 글만 삭제 가능하도록 클라이언트단 2차 검증)
+        const stored = localStorage.getItem(currentDetailStorageKey);
+        if (stored) {
+            try {
+                const posts = JSON.parse(stored);
+                const post = posts.find(p => p.id === currentDetailPostId);
+                if (post && post.userId && (!currentUser || post.userId !== currentUser.uid)) {
+                    alert("⚠️ 권한 오류\n\n본인이 작성한 게시글만 삭제할 수 있습니다.");
+                    return;
+                }
+            } catch(e) {}
+        }
         
         if (confirm("정말로 이 글을 삭제하시겠습니까?")) {
             const targetId = currentDetailPostId;
@@ -3210,13 +3240,15 @@
             commentDiv.style.cssText = 'padding: 12px 16px; background-color: white; border: 1px solid var(--border-color); border-radius: 8px; position: relative; text-align: left; box-sizing: border-box;';
             
             const isMyComment = currentUser && comment.userId === currentUser.uid;
+            const cleanAuthor = escapeHTML(comment.author);
+            const cleanContent = escapeHTML(comment.content).replace(/\n/g, '<br>');
             
             commentDiv.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <span style="font-size: 13px; font-weight: bold; color: var(--text-main);">👤 ${comment.author}</span>
+                    <span style="font-size: 13px; font-weight: bold; color: var(--text-main);">👤 ${cleanAuthor}</span>
                     <span style="font-size: 11px; color: var(--text-muted); margin-right: ${isMyComment ? '40px' : '0'};">${comment.date}</span>
                 </div>
-                <div style="font-size: 14px; color: var(--text-main); line-height: 1.5; word-break: break-all;">${comment.content.replace(/\n/g, '<br>')}</div>
+                <div style="font-size: 14px; color: var(--text-main); line-height: 1.5; word-break: break-all;">${cleanContent}</div>
                 ${isMyComment ? `<button style="position: absolute; right: 12px; top: 12px; background: none; border: none; color: var(--warning-red); font-size: 11px; cursor: pointer; font-weight: bold; padding: 4px;" onclick="deleteLoungeComment('${comment.id}')">🗑️ 삭제</button>` : ''}
             `;
             listContainer.appendChild(commentDiv);
