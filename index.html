@@ -2306,7 +2306,10 @@
                 existingFileType = "";
             }
             
-            switchView('view-lounge-write');
+            // 히스토리 스택에서 상세 보기(depth 2)를 글쓰기(depth 2)로 대체하여
+            // 저장 완료 혹은 취소 시 history.go(-1)을 통해 깔끔하게 목록(depth 1)으로 돌아갈 수 있게 함
+            history.replaceState({ viewId: 'view-lounge-write', depth: 2 }, '', '#view-lounge-write');
+            switchView('view-lounge-write', false);
         } catch(e) {
             console.error(e);
         }
@@ -2342,7 +2345,7 @@
                     
                     // 3. 업데이트된 ID 리스트 서버 전송
                     setServerValue(idsKey, JSON.stringify(serverIds)).then(() => {
-                        // 4. 로컬 스토리지 업데이트 및 뷰 전환
+                        // 4. 로컬 스토리지 업데이트 및 목록으로 복귀
                         const stored = localStorage.getItem(currentDetailStorageKey);
                         if (stored) {
                             try {
@@ -2351,13 +2354,14 @@
                                 localStorage.setItem(currentDetailStorageKey, JSON.stringify(posts));
                             } catch(e) {}
                         }
-                        switchView('view-lounge');
+                        // 히스토리 상에서 목록(depth 1)으로 직접 뒤로가기 동작 수행
+                        history.go(-1);
                     });
                 });
             } else {
                 // [프로덕션 모드] Firestore 컬렉션에서 문서 삭제
                 db.collection('lounge_posts').doc(targetId).delete().then(() => {
-                    switchView('view-lounge');
+                    history.go(-1);
                 }).catch(err => {
                     console.error("Firestore 글 삭제 실패:", err);
                     alert("글 삭제에 실패했습니다.");
@@ -2520,7 +2524,8 @@
                 dbPromise.then(() => {
                     editingPostId = null;
                     clearSelectedFile();
-                    switchView('view-lounge');
+                    // 목록(depth 1)으로 뒤로가기 수행 (정상 히스토리 스택 유지)
+                    history.go(-1);
                 }).catch(err => {
                     console.error("Firestore post save failed:", err);
                     alert("게시글 저장에 실패했습니다. 다시 시도해 주세요.");
@@ -2577,7 +2582,7 @@
                         setServerValue(idsKey, JSON.stringify(serverIds)).then(() => {
                             localStorage.setItem(storageKey, JSON.stringify(posts));
                             clearSelectedFile();
-                            switchView('view-lounge');
+                            history.go(-1);
                         });
                     });
                 }).catch(err => {
@@ -2585,7 +2590,7 @@
                     alert("서버 연결에 실패하여 게시글이 로컬에 저장되었습니다.");
                     localStorage.setItem(storageKey, JSON.stringify(posts));
                     clearSelectedFile();
-                    switchView('view-lounge');
+                    history.go(-1);
                 });
             }
         };
