@@ -711,6 +711,24 @@
                 <!-- JavaScript가 동적으로 생성 -->
             </div>
             
+            <!-- 댓글 영역 추가 -->
+            <div id="lounge-comments-section" style="margin-top: 25px; border-top: 2px solid var(--border-color); padding-top: 20px; box-sizing: border-box; text-align: left;">
+                <h4 style="font-size: 16px; font-weight: bold; color: var(--text-main); margin: 0 0 15px 0; display: flex; align-items: center; gap: 6px;">
+                    💬 댓글 <span id="lounge-comments-count" style="background-color: var(--fw-green); color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold;">0</span>
+                </h4>
+                
+                <!-- 댓글 리스트 -->
+                <div id="lounge-comments-list" style="max-height: 350px; overflow-y: auto; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; padding-right: 5px;">
+                    <!-- JavaScript가 동적으로 생성 -->
+                </div>
+                
+                <!-- 댓글 입력 폼 -->
+                <div class="lounge-comment-input-area" style="display: flex; gap: 8px; align-items: center; background-color: #FAFAFA; border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; box-sizing: border-box;">
+                    <input type="text" id="lounge-comment-text" placeholder="따뜻한 댓글을 남겨주세요..." style="flex-grow: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 14px; box-sizing: border-box; min-width: 0; background-color: white;">
+                    <button class="btn-primary" onclick="submitLoungeComment()" style="margin: 0; padding: 10px 16px; font-size: 14px; width: auto; background-color: var(--fw-green); color: white; border-radius: 6px; cursor: pointer; flex-shrink: 0; font-weight: bold; height: 38px; display: inline-flex; align-items: center; justify-content: center;">등록</button>
+                </div>
+            </div>
+            
             <div class="modal-buttons" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-color);">
                 <button class="btn-primary btn-home" style="margin-bottom: 0;" onclick="history.back()">목록으로 돌아가기</button>
             </div>
@@ -1020,6 +1038,9 @@
     let existingFileName = "";
     let existingFileType = "";
 
+    // 라운지 게시판 댓글 실시간 구독 변수
+    let activeCommentsUnsubscribe = null;
+
     // 근무자 버튼 동적 생성
     const grid = document.getElementById('member-grid');
     members.forEach(name => {
@@ -1104,6 +1125,12 @@
         if (!targetView) {
             console.error("View not found:", viewId);
             return;
+        }
+
+        // 라운지 상세 화면을 떠날 때 댓글 실시간 리스너 해제
+        if (viewId !== 'view-lounge-detail' && activeCommentsUnsubscribe) {
+            activeCommentsUnsubscribe();
+            activeCommentsUnsubscribe = null;
         }
         document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
         targetView.classList.add('active');
@@ -2163,6 +2190,43 @@
                 ${attachmentHtml}
             `;
             
+            // 댓글 관련 UI 초기화
+            document.getElementById('lounge-comment-text').value = '';
+            document.getElementById('lounge-comments-list').innerHTML = '<div style="font-size: 14px; color: var(--text-muted); text-align: center; padding: 20px 0;">댓글을 불러오는 중...</div>';
+            document.getElementById('lounge-comments-count').textContent = '0';
+
+            // 댓글 불러오기 및 실시간 연동 설정
+            if (activeCommentsUnsubscribe) {
+                activeCommentsUnsubscribe();
+                activeCommentsUnsubscribe = null;
+            }
+
+            if (!isDummyConfig) {
+                activeCommentsUnsubscribe = db.collection('lounge_posts').doc(postId).collection('comments').orderBy('createdAt', 'asc')
+                    .onSnapshot(snapshot => {
+                        const commentsList = [];
+                        snapshot.forEach(doc => {
+                            const data = doc.data();
+                            let dateStr = "";
+                            if (data.createdAt) {
+                                dateStr = new Date(data.createdAt.toDate()).toLocaleString();
+                            } else {
+                                dateStr = data.date || new Date().toLocaleString();
+                            }
+                            commentsList.push({
+                                id: doc.id,
+                                ...data,
+                                date: dateStr
+                            });
+                        });
+                        renderLoungeComments(commentsList);
+                    }, err => {
+                        console.error("Lounge comments subscribe error:", err);
+                    });
+            } else {
+                syncCommentsFromServer(postId);
+            }
+
             switchView('view-lounge-detail');
         } catch(e) {
             console.error(e);
@@ -3039,6 +3103,11 @@
                 renderLoungeList();
             });
         }
+        if (document.getElementById('view-lounge-detail').classList.contains('active')) {
+            if (isDummyConfig && currentDetailPostId) {
+                syncCommentsFromServer(currentDetailPostId);
+            }
+        }
         if (document.getElementById('view-close').classList.contains('active')) {
             syncDraftsFromServer();
         }
@@ -3113,6 +3182,141 @@
         setServerValue(`closing_draft_${author}_v2`, "").then(() => {
             if (callback) callback();
         });
+    }
+
+    // ===== 13. 라운지 댓글 기능 및 동기화 =====
+
+    function renderLoungeComments(comments) {
+        const listContainer = document.getElementById('lounge-comments-list');
+        const countBadge = document.getElementById('lounge-comments-count');
+        if (!listContainer || !countBadge) return;
+
+        countBadge.textContent = comments.length.toString();
+
+        if (comments.length === 0) {
+            listContainer.innerHTML = `<div style="font-size: 14px; color: var(--text-muted); text-align: center; padding: 20px 0;">등록된 댓글이 없습니다. 첫 댓글을 남겨보세요!</div>`;
+            return;
+        }
+
+        listContainer.innerHTML = '';
+        comments.forEach(comment => {
+            const commentDiv = document.createElement('div');
+            commentDiv.className = 'lounge-comment-item';
+            commentDiv.style.cssText = 'padding: 12px 16px; background-color: white; border: 1px solid var(--border-color); border-radius: 8px; position: relative; text-align: left; box-sizing: border-box;';
+            
+            const isMyComment = currentUser && comment.userId === currentUser.uid;
+            
+            commentDiv.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <span style="font-size: 13px; font-weight: bold; color: var(--text-main);">👤 ${comment.author}</span>
+                    <span style="font-size: 11px; color: var(--text-muted); margin-right: ${isMyComment ? '40px' : '0'};">${comment.date}</span>
+                </div>
+                <div style="font-size: 14px; color: var(--text-main); line-height: 1.5; word-break: break-all;">${comment.content.replace(/\n/g, '<br>')}</div>
+                ${isMyComment ? `<button style="position: absolute; right: 12px; top: 12px; background: none; border: none; color: var(--warning-red); font-size: 11px; cursor: pointer; font-weight: bold; padding: 4px;" onclick="deleteLoungeComment('${comment.id}')">🗑️ 삭제</button>` : ''}
+            `;
+            listContainer.appendChild(commentDiv);
+        });
+        
+        listContainer.scrollTop = listContainer.scrollHeight;
+    }
+
+    function syncCommentsFromServer(postId) {
+        if (!postId) return;
+        getServerValue(`lounge_comments_${postId}`).then(commentsStr => {
+            let comments = [];
+            if (commentsStr) {
+                try {
+                    comments = JSON.parse(commentsStr);
+                } catch (e) {}
+            }
+            renderLoungeComments(comments);
+        });
+    }
+
+    function submitLoungeComment() {
+        if (!currentDetailPostId) return;
+        const textInput = document.getElementById('lounge-comment-text');
+        const content = textInput.value.trim();
+        if (!content) {
+            alert("댓글 내용을 입력해주세요!");
+            return;
+        }
+
+        const authorName = currentUser ? currentUser.displayName : (localStorage.getItem('temp_author') || "알 수 없음");
+        const userId = currentUser ? currentUser.uid : null;
+        const email = currentUser ? currentUser.email : null;
+        const dateStr = new Date().toLocaleString();
+
+        const commentObj = {
+            author: authorName,
+            userId: userId,
+            email: email,
+            content: content,
+            date: dateStr
+        };
+
+        const submitBtn = document.querySelector('#view-lounge-detail .lounge-comment-input-area button');
+        if (submitBtn) submitBtn.disabled = true;
+
+        if (!isDummyConfig) {
+            db.collection('lounge_posts').doc(currentDetailPostId).collection('comments').add({
+                ...commentObj,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                textInput.value = '';
+                if (submitBtn) submitBtn.disabled = false;
+            }).catch(err => {
+                console.error("Comment submit error:", err);
+                alert("댓글 작성에 실패했습니다.");
+                if (submitBtn) submitBtn.disabled = false;
+            });
+        } else {
+            getServerValue(`lounge_comments_${currentDetailPostId}`).then(commentsStr => {
+                let comments = [];
+                if (commentsStr) {
+                    try {
+                        comments = JSON.parse(commentsStr);
+                    } catch (e) {}
+                }
+                const commentId = Date.now().toString();
+                comments.push({ id: commentId, ...commentObj });
+                
+                setServerValue(`lounge_comments_${currentDetailPostId}`, JSON.stringify(comments)).then(() => {
+                    textInput.value = '';
+                    if (submitBtn) submitBtn.disabled = false;
+                    renderLoungeComments(comments);
+                }).catch(err => {
+                    console.error("Comment submit error:", err);
+                    if (submitBtn) submitBtn.disabled = false;
+                });
+            });
+        }
+    }
+
+    function deleteLoungeComment(commentId) {
+        if (!currentDetailPostId || !commentId) return;
+        if (!confirm("정말로 이 댓글을 삭제하시겠습니까?")) return;
+
+        if (!isDummyConfig) {
+            db.collection('lounge_posts').doc(currentDetailPostId).collection('comments').doc(commentId).delete()
+                .catch(err => {
+                    console.error("Comment delete error:", err);
+                    alert("댓글 삭제에 실패했습니다.");
+                });
+        } else {
+            getServerValue(`lounge_comments_${currentDetailPostId}`).then(commentsStr => {
+                let comments = [];
+                if (commentsStr) {
+                    try {
+                        comments = JSON.parse(commentsStr);
+                    } catch (e) {}
+                }
+                comments = comments.filter(c => c.id !== commentId);
+                setServerValue(`lounge_comments_${currentDetailPostId}`, JSON.stringify(comments)).then(() => {
+                    renderLoungeComments(comments);
+                });
+            });
+        }
     }
 
 </script>
