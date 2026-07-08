@@ -1927,7 +1927,7 @@
                 }
             })
             .catch(() => {
-                document.getElementById('app-version-text').textContent = `앱 버전: v61 (오프라인)`;
+                document.getElementById('app-version-text').textContent = `앱 버전: v62 (오프라인)`;
             });
     };
 
@@ -2739,9 +2739,21 @@
                 const fileRef = storage.ref().child(`lounge_files/${Date.now()}_${selectedFileName}`);
                 const uploadTask = fileRef.put(selectedFileDataFile);
                 
+                // Firebase Storage가 활성화되지 않았거나 네트워크 차단으로 0%에서 멈추는 경우를 대비한 4초 타임아웃 안전장치
+                let isProgressed = false;
+                const timeoutId = setTimeout(() => {
+                    if (!isProgressed) {
+                        console.warn("Firebase Storage upload timed out (stuck at 0%). Canceling task to trigger local fallback...");
+                        uploadTask.cancel();
+                    }
+                }, 4000);
+                
                 uploadTask.on('state_changed', 
                     (snapshot) => {
                         const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+                        if (progress > 0) {
+                            isProgressed = true;
+                        }
                         if (progressBar) progressBar.style.width = progress + '%';
                         if (progressPercent) progressPercent.textContent = progress + '%';
                         if (submitBtn) {
@@ -2749,6 +2761,7 @@
                         }
                     }, 
                     (err) => {
+                        clearTimeout(timeoutId);
                         console.error("Firebase Storage upload failed, falling back to local storage:", err);
                         if (progressContainer) progressContainer.style.display = 'none';
                         
@@ -2769,6 +2782,7 @@
                         }
                     }, 
                     () => {
+                        clearTimeout(timeoutId);
                         // 업로드 완료
                         uploadTask.snapshot.ref.getDownloadURL().then(downloadURL => {
                             if (progressContainer) progressContainer.style.display = 'none';
