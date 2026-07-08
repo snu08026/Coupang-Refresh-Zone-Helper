@@ -1877,9 +1877,22 @@
             const viewId = hash.replace('#', '');
             if (document.getElementById(viewId)) {
                 switchView(viewId, false);
+                
+                // 1. 즉시 히스토리 초기화 시도
                 setTimeout(() => {
                     initHistory(viewId);
                 }, 100);
+                
+                // 2. 크롬의 'History manipulation intervention' 방지를 위해, 첫 사용자 상호작용(터치, 스크롤, 클릭) 시점에 히스토리 재동기화
+                const setupHistoryOnInteraction = () => {
+                    initHistory(viewId);
+                    window.removeEventListener('touchstart', setupHistoryOnInteraction);
+                    window.removeEventListener('click', setupHistoryOnInteraction);
+                    window.removeEventListener('scroll', setupHistoryOnInteraction);
+                };
+                window.addEventListener('touchstart', setupHistoryOnInteraction, { passive: true });
+                window.addEventListener('click', setupHistoryOnInteraction, { passive: true });
+                window.addEventListener('scroll', setupHistoryOnInteraction, { passive: true });
             } else {
                 switchView('view-home', false);
                 setTimeout(() => {
@@ -1914,7 +1927,7 @@
                 }
             })
             .catch(() => {
-                document.getElementById('app-version-text').textContent = `앱 버전: v60 (오프라인)`;
+                document.getElementById('app-version-text').textContent = `앱 버전: v61 (오프라인)`;
             });
     };
 
