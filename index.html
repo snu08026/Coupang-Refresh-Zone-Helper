@@ -14,6 +14,7 @@
     <meta name="theme-color" content="#2E7D32">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://upload.wikimedia.org https://snu08026.github.io; connect-src 'self' https://keyvalue.immanuel.co https://*.firebaseio.com https://*.googleapis.com https://*.firebasestorage.app https://*.firebase.com; frame-src 'self' https://coupang-refresh-zone-helper.firebaseapp.com;">
     <link rel="apple-touch-icon" href="아가 파우미.png">
 
     <!-- Firebase SDK (v10 Compat) CDN 연동 -->
@@ -1932,7 +1933,7 @@
                 }
             })
             .catch(() => {
-                document.getElementById('app-version-text').textContent = `앱 버전: v65 (오프라인)`;
+                document.getElementById('app-version-text').textContent = `앱 버전: v66 (오프라인)`;
             });
     };
 
@@ -2150,16 +2151,21 @@
         sortedPosts.forEach((post) => {
             const card = document.createElement('div');
             card.className = 'lounge-card';
-            card.setAttribute('onclick', `openLoungeDetail('${storageKey}', '${post.id}')`);
             card.style.cursor = 'pointer';
             if (post.pinned) {
                 card.style.borderColor = 'var(--fw-green)';
                 card.style.backgroundColor = '#F9FBF9'; // 연한 연두색 배경으로 고정 글 강조
             }
+            
+            // 안전한 click 이벤트 리스너 바인딩을 통해 속성 파괴(Attribute Breakout) 및 DOM-based XSS 방지
+            card.addEventListener('click', () => {
+                openLoungeDetail(storageKey, post.id);
+            });
+
             card.innerHTML = `
                 <div class="lounge-card-meta" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
                     <span>👤 <strong style="margin-left: 3px;">${escapeHTML(post.author)}</strong></span>
-                    <span>📅 ${post.date}</span>
+                    <span>📅 ${escapeHTML(post.date)}</span>
                 </div>
                 <h4 class="lounge-card-title" style="margin: 8px 0 0 0; font-size: 16px; color: var(--text-main); font-weight: bold; line-height: 1.4; text-align: left; display: flex; align-items: center; justify-content: space-between; width: 100%;">
                     <span style="display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
@@ -2218,7 +2224,7 @@
                         </button>
                         ${deleteBtnHtml}
                     </span>
-                    <span style="width: 100%; text-align: right; font-size: 11px; color: #888; margin-top: 4px;">📅 작성일: ${post.date}</span>
+                    <span style="width: 100%; text-align: right; font-size: 11px; color: #888; margin-top: 4px;">📅 작성일: ${escapeHTML(post.date)}</span>
                 </div>
                 <h3 class="lounge-card-title" style="margin: 0 0 15px 0; font-size: 19px; color: var(--text-main); font-weight: bold; line-height: 1.4; display: flex; align-items: center; text-align: left;">
                     ${post.pinned ? '<span style="background-color: var(--fw-green); color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; margin-right: 8px; font-weight: bold; display: inline-block;">📌 고정</span>' : ''}
@@ -3178,11 +3184,22 @@
             commentDiv.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                     <span style="font-size: 13px; font-weight: bold; color: var(--text-main);">👤 ${cleanAuthor}</span>
-                    <span style="font-size: 11px; color: var(--text-muted); margin-right: ${isMyComment ? '40px' : '0'};">${comment.date}</span>
+                    <span style="font-size: 11px; color: var(--text-muted); margin-right: ${isMyComment ? '40px' : '0'};">${escapeHTML(comment.date)}</span>
                 </div>
                 <div style="font-size: 14px; color: var(--text-main); line-height: 1.5; word-break: break-all;">${cleanContent}</div>
-                ${isMyComment ? `<button style="position: absolute; right: 12px; top: 12px; background: none; border: none; color: var(--warning-red); font-size: 11px; cursor: pointer; font-weight: bold; padding: 4px;" onclick="deleteLoungeComment('${comment.id}')">🗑️ 삭제</button>` : ''}
             `;
+            
+            // 동적 이벤트 리스너를 결합한 버튼 생성을 통해 deleteLoungeComment의 속성 파괴 XSS 공격 방어
+            if (isMyComment) {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.style.cssText = 'position: absolute; right: 12px; top: 12px; background: none; border: none; color: var(--warning-red); font-size: 11px; cursor: pointer; font-weight: bold; padding: 4px;';
+                deleteBtn.textContent = '🗑️ 삭제';
+                deleteBtn.addEventListener('click', () => {
+                    deleteLoungeComment(comment.id);
+                });
+                commentDiv.appendChild(deleteBtn);
+            }
+            
             listContainer.appendChild(commentDiv);
         });
         
