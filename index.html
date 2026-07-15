@@ -1933,7 +1933,7 @@
                 }
             })
             .catch(() => {
-                document.getElementById('app-version-text').textContent = `앱 버전: v66 (오프라인)`;
+                document.getElementById('app-version-text').textContent = `앱 버전: v67 (오프라인)`;
             });
     };
 
@@ -2336,7 +2336,13 @@
             document.getElementById('lounge-write-content').value = post.content;
             document.getElementById('lounge-write-pinned').checked = post.pinned;
             
-
+            // 수정 폼 진입 시 저장하기 버튼의 상태와 텍스트를 수정하기 상태로 초기화
+            const submitBtn = document.querySelector('#view-lounge-write button[onclick="submitLoungePost()"]');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '수정하기';
+                submitBtn.style.opacity = '1';
+            }
             
             // 히스토리 스택에서 상세 보기(depth 2)를 글쓰기(depth 2)로 대체하여
             // 저장 완료 혹은 취소 시 history.go(-1)을 통해 깔끔하게 목록(depth 1)으로 돌아갈 수 있게 함
@@ -2453,6 +2459,14 @@
         document.getElementById('lounge-write-content').value = defaultContent;
         document.getElementById('lounge-write-pinned').checked = false;
         
+        // 글쓰기 폼 진입 시 저장하기 버튼의 상태와 텍스트를 등록하기 상태로 초기화
+        const submitBtn = document.querySelector('#view-lounge-write button[onclick="submitLoungePost()"]');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '등록하기';
+            submitBtn.style.opacity = '1';
+        }
+
         switchView('view-lounge-write');
     }
 
