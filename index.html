@@ -412,7 +412,7 @@
         
         <div style="width: 100%; text-align: left; margin-bottom: 25px;">
             <label style="display: block; font-weight: bold; margin-bottom: 6px; font-size: 13px; color: var(--text-main);">구글 이메일 주소</label>
-            <input type="email" id="virtual-login-email" placeholder="example@gmail.com" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; box-sizing: border-box; background-color: white; color: var(--text-main);">
+            <input type="email" id="virtual-login-email" placeholder="example@gmail.com" maxlength="50" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; box-sizing: border-box; background-color: white; color: var(--text-main);">
         </div>
         
         <div style="display: flex; gap: 10px; width: 100%;">
@@ -521,7 +521,7 @@
             </div>
             <div style="margin-bottom: 25px; text-align: left;">
                 <label style="display: block; font-weight: bold; margin-bottom: 8px; font-size: 14px; color: var(--text-main);">특이사항 내용</label>
-                <textarea id="open-write-content" placeholder="오늘 오픈 근무 중 인프라나 시설, 비품 등 특이사항을 기록해 주세요. 작성 후 저장 시 클라우드를 통해 전 근무자에게 동기화됩니다." style="width: 100%; height: 200px; padding: 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px; resize: none; color: var(--text-main); font-family: inherit; line-height: 1.5; box-sizing: border-box;"></textarea>
+                <textarea id="open-write-content" placeholder="오늘 오픈 근무 중 인프라나 시설, 비품 등 특이사항을 기록해 주세요. 작성 후 저장 시 클라우드를 통해 전 근무자에게 동기화됩니다." maxlength="2000" style="width: 100%; height: 200px; padding: 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px; resize: none; color: var(--text-main); font-family: inherit; line-height: 1.5; box-sizing: border-box;"></textarea>
             </div>
             <button class="btn-primary btn-submit active" onclick="submitOpenNotes()">저장 및 동기화</button>
             <button class="btn-primary btn-back" onclick="history.back()">뒤로 가기</button>
@@ -608,7 +608,7 @@
 
         <div class="notes-section">
             <label class="notes-label">📝 다음 날 오픈 직원을 위한 특이사항</label>
-            <textarea id="open-notes" placeholder="오픈 근무자에게 전달할 내용이나 부족한 비품 등 특이사항을 적어주세요."></textarea>
+            <textarea id="open-notes" placeholder="오픈 근무자에게 전달할 내용이나 부족한 비품 등 특이사항을 적어주세요." maxlength="2000"></textarea>
             <button class="btn-primary btn-submit" id="submit-btn" onclick="submitClosing()">최종 마감 완료</button>
             <button class="btn-primary btn-back" onclick="history.back()">뒤로 가기 (근무자 재선택)</button>
             <button class="btn-primary btn-home" style="margin-top:10px;" onclick="goHome()">홈으로 가기</button>
@@ -661,17 +661,17 @@
             <div style="flex: 1; display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
                 <div style="text-align: left;">
                     <label class="modal-label">작성자</label>
-                    <input type="text" id="lounge-write-author" placeholder="이름을 입력하세요 (예: 이지희)" class="modal-input" style="width: 100%;">
+                    <input type="text" id="lounge-write-author" placeholder="이름을 입력하세요 (예: 이지희)" maxlength="20" class="modal-input" style="width: 100%;">
                 </div>
                 
                 <div style="text-align: left;">
                     <label class="modal-label">제목</label>
-                    <input type="text" id="lounge-write-title" placeholder="제목을 입력하세요" class="modal-input" style="width: 100%;">
+                    <input type="text" id="lounge-write-title" placeholder="제목을 입력하세요" maxlength="100" class="modal-input" style="width: 100%;">
                 </div>
                 
                 <div style="text-align: left; flex: 1; display: flex; flex-direction: column;">
                     <label class="modal-label">내용</label>
-                    <textarea id="lounge-write-content" placeholder="공유할 내용을 입력하세요" class="modal-textarea" style="flex: 1; min-height: 200px; width: 100%; box-sizing: border-box;"></textarea>
+                    <textarea id="lounge-write-content" placeholder="공유할 내용을 입력하세요" maxlength="3000" class="modal-textarea" style="flex: 1; min-height: 200px; width: 100%; box-sizing: border-box;"></textarea>
                 </div>
                 
 
@@ -715,7 +715,7 @@
                 
                 <!-- 댓글 입력 폼 -->
                 <div class="lounge-comment-input-area" style="display: flex; gap: 8px; align-items: center; background-color: #FAFAFA; border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; box-sizing: border-box;">
-                    <input type="text" id="lounge-comment-text" placeholder="따뜻한 댓글을 남겨주세요..." style="flex-grow: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 14px; box-sizing: border-box; min-width: 0; background-color: white;">
+                    <input type="text" id="lounge-comment-text" placeholder="따뜻한 댓글을 남겨주세요..." maxlength="500" style="flex-grow: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 14px; box-sizing: border-box; min-width: 0; background-color: white;">
                     <button class="btn-primary" onclick="submitLoungeComment()" style="margin: 0; padding: 10px 16px; font-size: 14px; width: auto; background-color: var(--fw-green); color: white; border-radius: 6px; cursor: pointer; flex-shrink: 0; font-weight: bold; height: 38px; display: inline-flex; align-items: center; justify-content: center;">등록</button>
                 </div>
             </div>
@@ -729,6 +729,30 @@
 
 <script>
     // ===== 0. 클라우드 기기 간 실시간 동기화 설정 (Firebase SDK) =====
+    /*
+     * [Firestore 보안 규칙 권장 설정 가이드라인]
+     * 외부인의 악의적인 데이터 노출 및 덮어쓰기를 방지하기 위해 Firebase 콘솔 -> Firestore Database -> Rules 탭에
+     * 다음과 같은 규칙을 설정하여 적용하는 것을 적극 권장합니다.
+     *
+     * rules_version = '2';
+     * service cloud.firestore {
+     *   match /databases/{database}/documents {
+     *     // 인증된 근무자만 lounge_posts 및 그 하위 댓글을 읽고 쓸 수 있도록 허용
+     *     match /lounge_posts/{postId} {
+     *       allow read, write: if request.auth != null;
+     *
+     *       match /comments/{commentId} {
+     *         allow read, write: if request.auth != null;
+     *       }
+     *     }
+     *
+     *     // 그 외 helper 컬렉션(오픈/마감 상태 동기화) 또한 인증된 근무자만 접근 허용
+     *     match /helper/{document} {
+     *       allow read, write: if request.auth != null;
+     *     }
+     *   }
+     * }
+     */
     // TODO: 사용자의 Firebase 설정값으로 수정하여 사용하세요.
     const firebaseConfig = {
         apiKey: "AIzaSyDiUNt49eeO3HuAdwZ5h_Z9OGZvP7tJ2xo",
@@ -873,6 +897,16 @@
         }
         if (!email) {
             email = `${name}@gmail.com`;
+        } else {
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            if (!emailRegex.test(email)) {
+                alert("올바른 이메일 형식을 입력해주세요!");
+                return;
+            }
+            if (email.length > 50) {
+                alert("이메일 주소는 최대 50자까지 입력 가능합니다!");
+                return;
+            }
         }
 
         const virtualUser = {
@@ -1373,8 +1407,16 @@
             alert("작성자 이름을 선택하거나 로그인해 주세요!");
             return;
         }
+        if (author.length > 20) {
+            alert("작성자 이름은 최대 20자까지 가능합니다!");
+            return;
+        }
         if (!content) {
             alert("특이사항 내용을 입력해주세요!");
+            return;
+        }
+        if (content.length > 2000) {
+            alert("특이사항 내용은 최대 2000자까지 작성 가능합니다!");
             return;
         }
 
@@ -1760,6 +1802,10 @@
 
     function submitClosing() {
         const finalNotes = document.getElementById('open-notes').value;
+        if (finalNotes.length > 2000) {
+            alert("마감 특이사항은 최대 2000자까지 작성 가능합니다!");
+            return;
+        }
         const currentAuthor = localStorage.getItem('temp_author') || "알 수 없음";
         
         const finalState = { 
@@ -1933,7 +1979,7 @@
                 }
             })
             .catch(() => {
-                document.getElementById('app-version-text').textContent = `앱 버전: v67 (오프라인)`;
+                document.getElementById('app-version-text').textContent = `앱 버전: v68 (오프라인)`;
             });
     };
 
@@ -2480,12 +2526,24 @@
             alert("작성자 이름을 입력해주세요!");
             return;
         }
+        if (author.length > 20) {
+            alert("작성자 이름은 최대 20자까지 입력 가능합니다!");
+            return;
+        }
         if (!title) {
             alert("제목을 입력해주세요!");
             return;
         }
+        if (title.length > 100) {
+            alert("제목은 최대 100자까지 입력 가능합니다!");
+            return;
+        }
         if (!content) {
             alert("내용을 입력해주세요!");
+            return;
+        }
+        if (content.length > 3000) {
+            alert("내용은 최대 3000자까지 입력 가능합니다!");
             return;
         }
         
@@ -2636,6 +2694,10 @@
     }
 
     function fetchLegacyValue(key) {
+        if (isDummyConfig) {
+            const localVal = localStorage.getItem(`fw_dummy_sync_${key}`);
+            return Promise.resolve(localVal);
+        }
         return fetch(`https://keyvalue.immanuel.co/api/KeyVal/GetValue/datqf2xa/${key}?t=${Date.now()}`)
             .then(res => res.text())
             .then(text => {
@@ -2663,21 +2725,9 @@
     // 서버 키-값 읽기 헬퍼 (Firebase Firestore 연동 및 JSON 파싱/복원 자동 처리)
     function getServerValue(key) {
         if (isDummyConfig) {
-            // Immanuel API 서버에서 직접 데이터를 조회하여 동기화
-            return fetch(`https://keyvalue.immanuel.co/api/KeyVal/GetValue/datqf2xa/${key}?t=${Date.now()}`)
-                .then(res => res.text())
-                .then(text => {
-                    if (text && text.startsWith('"') && text.endsWith('"')) {
-                        text = text.slice(1, -1);
-                    }
-                    if (!text || text.trim() === '') return null;
-                    try {
-                        return decodeLegacyData(text);
-                    } catch(e) {
-                        return null;
-                    }
-                })
-                .catch(() => null);
+            // 보안 강화: 더미 모드일 때는 외부 공용 API 서버(immanuel.co)로 전송하지 않고 로컬 저장소만 사용
+            const localVal = localStorage.getItem(`fw_dummy_sync_${key}`);
+            return Promise.resolve(localVal);
         }
 
         const firestorePromise = db.collection('helper').doc(key).get()
@@ -2711,16 +2761,9 @@
     // 서버 키-값 저장 헬퍼 (Firebase Firestore 연동 및 JSON 가독성 보완)
     function setServerValue(key, value) {
         if (isDummyConfig) {
-            // Immanuel API 서버로 실시간 기기간 공유 업로드 처리
-            const base64urlStr = base64urlEncode(value);
-            const updateUrl = `https://keyvalue.immanuel.co/api/KeyVal/UpdateValue/datqf2xa/${key}?value=${base64urlStr}`;
-            return fetch(updateUrl, {
-                method: 'POST',
-                body: '1',
-                headers: { 'Content-Type': 'text/plain' }
-            }).catch(err => {
-                console.error("Upload error for legacy key:", key, err);
-            });
+            // 보안 강화: 더미 모드일 때는 외부 공용 API 서버(immanuel.co)로 전송하지 않고 로컬 저장소만 사용
+            localStorage.setItem(`fw_dummy_sync_${key}`, value);
+            return Promise.resolve(true);
         }
 
         let parsedValue = value;
@@ -3239,6 +3282,10 @@
         const content = textInput.value.trim();
         if (!content) {
             alert("댓글 내용을 입력해주세요!");
+            return;
+        }
+        if (content.length > 500) {
+            alert("댓글 내용은 최대 500자까지 작성 가능합니다!");
             return;
         }
 
