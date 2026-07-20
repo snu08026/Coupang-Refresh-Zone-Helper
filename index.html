@@ -14,14 +14,14 @@
     <meta name="theme-color" content="#2E7D32">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://upload.wikimedia.org https://snu08026.github.io; connect-src 'self' https://keyvalue.immanuel.co https://*.firebaseio.com https://*.googleapis.com https://*.firebasestorage.app https://*.firebase.com; frame-src 'self' https://coupang-refresh-zone-helper.firebaseapp.com;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://upload.wikimedia.org https://snu08026.github.io; connect-src 'self' https://keyvalue.immanuel.co https://*.firebaseio.com https://*.googleapis.com https://*.firebasestorage.app https://*.firebase.com https://*.firebaseapp.com; frame-src 'self' https://coupang-refresh-zone-helper.firebaseapp.com;">
     <link rel="apple-touch-icon" href="아가 파우미.png">
 
     <!-- Firebase SDK (v10 Compat) CDN 연동 -->
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 
     <title>Coupang Refresh Zone with FaWW</title>
     <style>
@@ -889,7 +889,7 @@
                 alert(`${currentUser.displayName}님, 환영합니다!`);
             })
             .catch((error) => {
-                console.error("구글 팝업 로그인 실패:", error);
+                console.error("구글 팝업 로그인 실패 (상세 디버그용):", error, "\n상세 페이로드:", JSON.stringify(error), "\n커스텀 데이터:", error.customData);
                 
                 // 팝업이 차단되었거나 차단 해제가 필요한 환경 대처
                 if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
@@ -2035,7 +2035,7 @@
                 }
             })
             .catch(() => {
-                document.getElementById('app-version-text').textContent = `앱 버전: v79 (오프라인)`;
+                document.getElementById('app-version-text').textContent = `앱 버전: v80 (오프라인)`;
             });
     };
 
