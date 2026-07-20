@@ -1309,14 +1309,33 @@
     function loadNotesForOpen() {
         renderOpenNotes();
         
+        const isNewerThanLocal = (newJsonStr) => {
+            const localSaved = localStorage.getItem('fw_closing_state');
+            if (!localSaved) return true;
+            try {
+                const localState = JSON.parse(localSaved);
+                const newState = JSON.parse(newJsonStr);
+                if (localState.date && newState.date) {
+                    const localTime = new Date(localState.date).getTime();
+                    const newTime = new Date(newState.date).getTime();
+                    if (!isNaN(localTime) && !isNaN(newTime)) {
+                        return newTime >= localTime;
+                    }
+                }
+            } catch(e) {}
+            return true;
+        };
+
         // 서버에서 즉시 최종 마감 특이사항 내려받기
         getServerValue('closing_state_v1').then(jsonStr => {
             if (jsonStr) {
                 try {
                     const state = JSON.parse(jsonStr);
                     if (state.notes || state.author) {
-                        localStorage.setItem('fw_closing_state', jsonStr);
-                        renderOpenNotes();
+                        if (isNewerThanLocal(jsonStr)) {
+                            localStorage.setItem('fw_closing_state', jsonStr);
+                            renderOpenNotes();
+                        }
                     }
                 } catch(e) {
                     console.error(e);
@@ -1325,9 +1344,11 @@
                 // Firestore에 데이터가 없는 경우 구 백엔드 임시 복구 시도
                 fetchLegacyValue('closing_state_v1').then(legacyStr => {
                     if (legacyStr) {
-                        localStorage.setItem('fw_closing_state', legacyStr);
-                        setServerValue('closing_state_v1', legacyStr); // Firestore로 업로드 복구
-                        renderOpenNotes();
+                        if (isNewerThanLocal(legacyStr)) {
+                            localStorage.setItem('fw_closing_state', legacyStr);
+                            setServerValue('closing_state_v1', legacyStr); // Firestore로 업로드 복구
+                            renderOpenNotes();
+                        }
                     }
                 });
             }
@@ -1979,7 +2000,7 @@
                 }
             })
             .catch(() => {
-                document.getElementById('app-version-text').textContent = `앱 버전: v68 (오프라인)`;
+                document.getElementById('app-version-text').textContent = `앱 버전: v69 (오프라인)`;
             });
     };
 
