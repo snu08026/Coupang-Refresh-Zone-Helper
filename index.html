@@ -784,6 +784,7 @@
         storage = firebase.storage();
     }
     let currentUser = null;
+    const ADMIN_EMAILS = ['snu08026@gmail.com'];
 
     // XSS 방지를 위한 HTML 문자열 이스케이프 헬퍼 함수
     function escapeHTML(str) {
@@ -2000,7 +2001,7 @@
                 }
             })
             .catch(() => {
-                document.getElementById('app-version-text').textContent = `앱 버전: v69 (오프라인)`;
+                document.getElementById('app-version-text').textContent = `앱 버전: v70 (오프라인)`;
             });
     };
 
@@ -2275,7 +2276,7 @@
             }
             
             // 본인 작성글 또는 더미 모드일 경우에만 수정/삭제 버튼 노출
-            const isMyPost = isDummyConfig || (currentUser && post.userId === currentUser.uid);
+            const isMyPost = isDummyConfig || (currentUser && (post.userId === currentUser.uid || ADMIN_EMAILS.includes(currentUser.email)));
             const editBtnHtml = isMyPost ? `<button class="lounge-btn-edit" onclick="editLoungePost()" style="background-color: #EEE; border: 1px solid #CCC; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; color: var(--text-main); font-weight: bold;">✏️ 수정</button>` : '';
             const deleteBtnHtml = isMyPost ? `<button class="lounge-card-delete" onclick="deleteLoungePostFromDetail()" title="삭제" style="background-color: #FFEBEE; border: 1px solid #FFCDD2; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; color: #C62828; font-weight: bold; margin: 0;">🗑️ 삭제</button>` : '';
 
@@ -2429,7 +2430,7 @@
             try {
                 const posts = JSON.parse(stored);
                 const post = posts.find(p => p.id === currentDetailPostId);
-                if (post && post.userId && (!currentUser || post.userId !== currentUser.uid)) {
+                if (post && post.userId && (!currentUser || (post.userId !== currentUser.uid && !ADMIN_EMAILS.includes(currentUser.email)))) {
                     alert("⚠️ 권한 오류\n\n본인이 작성한 게시글만 삭제할 수 있습니다.");
                     return;
                 }
@@ -3255,7 +3256,7 @@
             commentDiv.className = 'lounge-comment-item';
             commentDiv.style.cssText = 'padding: 12px 16px; background-color: white; border: 1px solid var(--border-color); border-radius: 8px; position: relative; text-align: left; box-sizing: border-box;';
             
-            const isMyComment = currentUser && comment.userId === currentUser.uid;
+            const isMyComment = currentUser && (comment.userId === currentUser.uid || ADMIN_EMAILS.includes(currentUser.email));
             const cleanAuthor = escapeHTML(comment.author);
             const cleanContent = escapeHTML(comment.content).replace(/\n/g, '<br>');
             
