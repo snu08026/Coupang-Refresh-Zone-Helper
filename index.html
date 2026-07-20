@@ -797,6 +797,27 @@
             .replace(/'/g, '&#039;');
     }
 
+    // iOS Safari 등 특정 브라우저에서 '2026. 7. 20.' 등 한국어 로케일 날짜 파싱 실패(Invalid Date)를 보정하는 안전한 날짜 파서
+    function parseSafeDate(dateStr) {
+        if (!dateStr) return new Date(0);
+        let d = new Date(dateStr);
+        if (!isNaN(d.getTime())) return d;
+        
+        try {
+            // 점(.)이나 대시(-)로 나뉜 한글 로케일 날짜 보정
+            const clean = dateStr.replace(/[^0-9.\- ]/g, '').trim();
+            const parts = clean.split(/[.\- ]+/).filter(Boolean);
+            if (parts.length >= 3) {
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1;
+                const day = parseInt(parts[2], 10);
+                d = new Date(year, month, day);
+                if (!isNaN(d.getTime())) return d;
+            }
+        } catch (e) {}
+        return new Date(0);
+    }
+
     // 세션 UI 바인딩 헬퍼
     function applyUserSession(user) {
         const authModal = document.getElementById('auth-overlay-modal');
@@ -1282,8 +1303,8 @@
                     let dateStr = "";
                     if (state.date) {
                         try {
-                            const d = new Date(state.date);
-                            if (!isNaN(d.getTime())) {
+                            const d = parseSafeDate(state.date);
+                            if (!isNaN(d.getTime()) && d.getTime() > 0) {
                                 const year = d.getFullYear();
                                 const month = d.getMonth() + 1;
                                 const dateVal = d.getDate();
@@ -1317,11 +1338,9 @@
                 const localState = JSON.parse(localSaved);
                 const newState = JSON.parse(newJsonStr);
                 if (localState.date && newState.date) {
-                    const localTime = new Date(localState.date).getTime();
-                    const newTime = new Date(newState.date).getTime();
-                    if (!isNaN(localTime) && !isNaN(newTime)) {
-                        return newTime >= localTime;
-                    }
+                    const localTime = parseSafeDate(localState.date).getTime();
+                    const newTime = parseSafeDate(newState.date).getTime();
+                    return newTime >= localTime;
                 }
             } catch(e) {}
             return true;
@@ -2001,7 +2020,7 @@
                 }
             })
             .catch(() => {
-                document.getElementById('app-version-text').textContent = `앱 버전: v70 (오프라인)`;
+                document.getElementById('app-version-text').textContent = `앱 버전: v71 (오프라인)`;
             });
     };
 
