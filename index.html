@@ -1386,17 +1386,22 @@
                     console.error(e);
                 }
             } else {
-                // Firestore에 데이터가 없는 경우 구 백엔드 임시 복구 시도
-                fetchLegacyValue('closing_state_v1').then(legacyStr => {
-                    if (legacyStr) {
-                        if (isNewerThanLocal(legacyStr)) {
-                            localStorage.setItem('fw_closing_state', legacyStr);
-                            setServerValue('closing_state_v1', legacyStr); // Firestore로 업로드 복구
-                            renderOpenNotes();
+                // Firestore 문서가 존재하지 않는 초기 환경에서만 구 백엔드 롤백 수행
+                if (!isDummyConfig) {
+                    fetchLegacyValue('closing_state_v1').then(legacyStr => {
+                        if (legacyStr) {
+                            if (isNewerThanLocal(legacyStr)) {
+                                localStorage.setItem('fw_closing_state', legacyStr);
+                                setServerValue('closing_state_v1', legacyStr).catch(()=>{}); // 복구 업로드 시도
+                                renderOpenNotes();
+                            }
                         }
-                    }
-                });
+                    });
+                }
             }
+        }).catch(err => {
+            console.error("마감 특이사항 로드 실패:", err);
+            // 에러 시에는 로컬 스토리지에 있는 데이터를 지우지 않고 그대로 둡니다.
         });
     }
 
@@ -1438,20 +1443,22 @@
                 } catch(e) {}
             } else {
                 // Firestore에 데이터가 없는 경우 구 백엔드 임시 복구 시도
-                fetchLegacyValue('open_state_v1').then(legacyStr => {
-                    if (legacyStr) {
-                        try {
-                            const state = JSON.parse(legacyStr);
-                            const today = new Date().toDateString();
-                            if (state.date === today) {
-                                localStorage.setItem('fw_open_state', legacyStr);
-                                setServerValue('open_state_v1', legacyStr); // Firestore로 업로드 복구
-                                document.getElementById('open-write-author').value = state.author || '';
-                                document.getElementById('open-write-content').value = state.notes || '';
-                            }
-                        } catch(e) {}
-                    }
-                });
+                if (!isDummyConfig) {
+                    fetchLegacyValue('open_state_v1').then(legacyStr => {
+                        if (legacyStr) {
+                            try {
+                                const state = JSON.parse(legacyStr);
+                                const today = new Date().toDateString();
+                                if (state.date === today) {
+                                    localStorage.setItem('fw_open_state', legacyStr);
+                                    setServerValue('open_state_v1', legacyStr).catch(()=>{}); // Firestore로 업로드 복구
+                                    document.getElementById('open-write-author').value = state.author || '';
+                                    document.getElementById('open-write-content').value = state.notes || '';
+                                }
+                            } catch(e) {}
+                        }
+                    });
+                }
             }
             
             // 구글 로그인 되어있는 경우 작성자 자동 매칭 선택
@@ -1461,6 +1468,8 @@
                     authorSelect.value = currentUser.displayName;
                 }
             }
+        }).catch(err => {
+            console.error("오픈 특이사항 동기화 실패:", err);
         });
     }
 
@@ -1502,8 +1511,8 @@
             alert("금일 오픈 특이사항이 성공적으로 저장 및 동기화되었습니다!");
             history.back(); // 오픈 근무 메뉴로 돌아가기
         }).catch(err => {
-            console.error(err);
-            alert("서버 전송 중 일부 불안정이 발생했으나, 로컬에는 안전하게 저장되었습니다.");
+            console.error("Firestore 오픈 전송 실패:", err);
+            alert("⚠️ [서버 전송 실패]\n\nFirestore 서버 전송에 실패했습니다. (보안 규칙 또는 데이터베이스 연결 상태를 확인하세요!)\n특이사항은 이 기기의 로컬 스토리지에 임시 저장되었습니다.");
             history.back();
         });
     }
@@ -1891,8 +1900,8 @@
             alert("성공적으로 마감 데이터가 저장되었습니다!\n수고하셨습니다.");
             location.reload(); 
         }).catch(err => {
-            console.error(err);
-            alert("서버 전송 중 일부 불안정이 발생했으나, 로컬에는 안전하게 제출되었습니다.");
+            console.error("Firestore 마감 전송 실패:", err);
+            alert("⚠️ [서버 전송 실패]\n\nFirestore 서버 전송에 실패했습니다. (보안 규칙 또는 데이터베이스 연결 상태를 확인하세요!)\n특이사항은 이 기기의 로컬 스토리지에 임시 저장되었습니다.");
             location.reload();
         });
     }
@@ -2045,7 +2054,7 @@
                 }
             })
             .catch(() => {
-                document.getElementById('app-version-text').textContent = `앱 버전: v72 (오프라인)`;
+                document.getElementById('app-version-text').textContent = `앱 버전: v73 (오프라인)`;
             });
     };
 
@@ -2820,7 +2829,7 @@
         return withTimeout(firestorePromise, 3000, null)
             .catch(err => {
                 console.error("Firebase get error for key:", key, err);
-                return null;
+                throw err; // 에러를 호출처로 전파하여 실패를 인지하게 함
             });
     }
 
@@ -2854,9 +2863,10 @@
 
         // 3초 타임아웃 안전장치 추가 (오프라인 상태 시 펜딩 방지)
         return withTimeout(firestorePromise, 3000, true)
+            .then(() => true)
             .catch(err => {
                 console.error("Firebase set error for key:", key, err);
-                return true; // 에러 및 타임아웃 시에도 UI 정상 진행을 위해 true 반환
+                throw err; // 에러를 호출처로 전파하여 쓰기 실패를 알림
             });
     }
 
